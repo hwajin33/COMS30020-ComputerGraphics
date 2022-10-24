@@ -1,0 +1,3 @@
+In order to use the `vec3` class, you will need to import the GLM header file with `#include <glm/glm.hpp>`. Note that you don't need to install the GLM library - this is already embedded within the `RedNoise` template (it's in the `libs` folder, if you are interested).
+
+It is wise to explicitly reference the package when using classes and methods (e.g. `glm::vec3`). If you have heard of something called `namespaces`, you will probably want to avoid using them on this unit. There are some duplicate method names in some of the packages we use later on - use of namespacing can lead to confusion and ambiguity.

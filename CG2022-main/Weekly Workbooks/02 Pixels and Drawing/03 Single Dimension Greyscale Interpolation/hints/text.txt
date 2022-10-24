@@ -1,0 +1,1 @@
+Adapt the pixel looping code inside the `draw` function of _RedNoise_ to achieve this task. Don't worry about the transparency/alpha channel of the pixels - just set it to 255 (fully opaque) as we did in the original _RedNoise_ template.

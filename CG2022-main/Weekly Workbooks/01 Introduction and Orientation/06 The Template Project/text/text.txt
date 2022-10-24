@@ -1,0 +1,15 @@
+In order to help get you started, we have provided a template project called <a href="https://github.com/COMS30020/RedNoise" target="_blank">RedNoise</a>. This project provides the structure that you will need for the weekly workbooks, as well as illustrating the use of the `DrawingWindow` methods. In order to work with the template project, you must first **FORK** the <a href="https://github.com/COMS30020/RedNoise" target="_blank">repository</a> into **your own GitHub workspace**.
+
+Once you have created a fork, clone it locally so that you then extend it with your own code. Periodically push the additions you had made to the project up onto your GitHub repository. It is **essential** that you create a fork first and don't just clone the original repository (because you don't have permission push changes into the COMS30020 GitHub organisation !) We will use your repository during the final marking process, so it is essential that you use GitHub throughout this unit.
+
+In order to help you compile, link and run the `RedNoise` project, a Makefile has been provided for you inside the project root folder. This makefile contains multiple rules to build code for different purposes:
+
+- debug: A development build rule that will compile and link your project for use with a debugger (gdb)
+- diagnostic: A development build rule that includes extra memory checking and diagnosis flags.  
+Note: this rule requires the <a href="https://clang.llvm.org/docs/AddressSanitizer.html" target="_blank">Address Sanitizer</a> library to be installed (which comes built-in with some C++ compilers)
+- speedy: A build rule that will result in an optimised "high performance" executable (to make interaction testing quicker and easier)
+- production: A build rule to make an executable without debug hooks (for release or distribution)
+
+Just typing `make` on its own will build the project using the _debug_ rule and run the resultant executable.
+
+When you have successfully built and run the `RedNoise` project you should see a window that looks like the below animation. Remember that the cleanest way to quit an SDL application is by pressing the ESC key ! If you have a window that you can't close (which does happen from time to time), you may need to kill off the process manually using Task Manager, Activity Monitor or the kill/killall command (depending on your platform).
