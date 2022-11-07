@@ -5,9 +5,9 @@
 #include <utility>
 #include <vector>
 #include <glm/glm.hpp>
-#include <CanvasPoint.h>
 #include <Colour.h>
 #include <CanvasTriangle.h>
+#include <CanvasPoint.h>
 #include <cstdlib>
 
 #define WIDTH 320
@@ -15,6 +15,7 @@
 
 using namespace std;
 
+// returns an evenly spaced list (as a vector) of size numberOfValues
 std::vector<float> interpolateSingleFloats(float from, float to, size_t numberOfValues) {
     numberOfValues = numberOfValues - 1;
     float betweenValue = (to - from)/numberOfValues;
@@ -48,14 +49,14 @@ uint32_t colourPacking(Colour col) {
     return (255 << 24) + (int(col.red) << 16) + (int(col.green) << 8) + int(col.blue);
 }
 
-Colour random_colour() {
+Colour randomColour() {
     float red = rand()%256;
     float green = rand()%256;
     float blue = rand()%256;
     return Colour(red, green, blue);
 }
 
-CanvasTriangle random_vertices() {
+CanvasTriangle randomVertices() {
     CanvasPoint v0 = CanvasPoint(rand()%WIDTH, rand()%HEIGHT);
     CanvasPoint v1 = CanvasPoint(rand()%WIDTH, rand()%HEIGHT);
     CanvasPoint v2 = CanvasPoint(rand()%WIDTH, rand()%HEIGHT);
@@ -84,10 +85,10 @@ void drawTriangle(CanvasTriangle triangle, Colour triColour, DrawingWindow &wind
 }
 
 void randomTriangle(DrawingWindow &window) {
-    drawTriangle(random_vertices(), random_colour(), window);
+    drawTriangle(randomVertices(), randomColour(), window);
 }
 
-void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour colour) {
+void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillColour) {
     // sort the vertices
     if (triangle.v0().y < triangle.v1().y) {
         swap(triangle.vertices[0], triangle.vertices[1]);
@@ -101,9 +102,33 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour colou
 
     float x_difference = (triangle.v2().x) - (triangle.v0().x);
     float y_difference = (triangle.v2().y) - (triangle.v0().y);
+    float z_difference = (triangle.v2().depth) - (triangle.v0().depth);
     float ratio = x_difference/y_difference;
+    float bottomTriRatio = (triangle.v1().y - triangle.v0().y) * ratio;
 
+    // how to calculate the extra point
+    CanvasPoint extraPoint = CanvasPoint((bottomTriRatio + triangle.v0().x), triangle.v1().y, triangle.v1().depth);
 
+    float diff_1 = triangle.v1().y - triangle.v0().y;
+    float diff_2 = triangle.v2().y - triangle.v1().y;
+
+    // getting the position of the x coordinate to draw the line horizontally
+    std::vector<float> sideV0ToExtra = interpolateSingleFloats(triangle.v0().x, extraPoint.x, diff_1);
+    std::vector<float> sideV0ToV1 = interpolateSingleFloats(triangle.v0().x, triangle.v1().x, diff_1);
+    std::vector<float> sideV1ToV2 = interpolateSingleFloats(triangle.v1().x, triangle.v2().x, diff_2);
+    std::vector<float> sideExtraToV2 = interpolateSingleFloats(extraPoint.x, triangle.v2().x, diff_2);
+
+    for (size_t i = 0; i < sideV0ToExtra.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        drawLine(CanvasPoint(sideV0ToExtra[i], i + triangle.v0().y), CanvasPoint(sideV0ToV1[i], i + triangle.v0().y),window, fillColour);
+    }
+
+    for (size_t i = 0; i < sideV1ToV2.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y), window, fillColour);
+    }
+
+    drawTriangle(triangle, fillColour, window);
 
     // cut the triangle in half by drawing a line in the middle
     //drawLine()
@@ -158,6 +183,9 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
         else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
         else if (event.key.keysym.sym == SDLK_u) {
             randomTriangle(window);
+        }
+        else if (event.key.keysym.sym == SDLK_f) {
+            fillInTriangle(window, randomVertices(), randomColour());
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
