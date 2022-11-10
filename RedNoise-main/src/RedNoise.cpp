@@ -67,14 +67,18 @@ CanvasTriangle randomVertices() {
 void drawLine(CanvasPoint from, CanvasPoint to, DrawingWindow &window, Colour colour) {
     float xDistance = to.x - from.x;
     float yDistance = to.y - from.y;
+    //float zDistance = to.depth - from.depth;
     float numberOfSteps = max(abs(xDistance), abs(yDistance));
     float xStepSize = xDistance/numberOfSteps;
     float yStepSize = yDistance/numberOfSteps;
+    //float zStepSize = zDistance/numberOfSteps;
     for (float i = 0.0; i < numberOfSteps; i++) {
         float x = from.x + (xStepSize * i);
         float y = from.y + (yStepSize * i);
+        //float z = 1 / (from.depth + (zStepSize * i));
         window.setPixelColour(round(x), round(y), colourPacking(colour));
         //(0, 127)
+
     }
 }
 
@@ -90,24 +94,25 @@ void randomTriangle(DrawingWindow &window) {
 
 void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillColour) {
     // sort the vertices
-    if (triangle.v0().y < triangle.v1().y) {
+    if (triangle.v0().y > triangle.v1().y) {
         swap(triangle.vertices[0], triangle.vertices[1]);
     }
-    if (triangle.v0().y < triangle.v2().y) {
+    if (triangle.v0().y > triangle.v2().y) {
         swap(triangle.vertices[0], triangle.vertices[2]);
     }
-    if (triangle.v1().y < triangle.v2().y) {
+    if (triangle.v1().y > triangle.v2().y) {
         swap(triangle.vertices[1], triangle.vertices[2]);
     }
 
+    // finding the horizontal line of the triangle -> length of the bottom of the small triangle
     float x_difference = (triangle.v2().x) - (triangle.v0().x);
     float y_difference = (triangle.v2().y) - (triangle.v0().y);
-    float z_difference = (triangle.v2().depth) - (triangle.v0().depth);
+    //float z_difference = (triangle.v2().depth) - (triangle.v0().depth);
     float ratio = x_difference/y_difference;
-    float bottomTriRatio = (triangle.v1().y - triangle.v0().y) * ratio;
+    float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
 
-    // how to calculate the extra point
-    CanvasPoint extraPoint = CanvasPoint((bottomTriRatio + triangle.v0().x), triangle.v1().y, triangle.v1().depth);
+    // calculate the extra point
+    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y);
 
     float diff_1 = triangle.v1().y - triangle.v0().y;
     float diff_2 = triangle.v2().y - triangle.v1().y;
@@ -123,12 +128,18 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillC
         drawLine(CanvasPoint(sideV0ToExtra[i], i + triangle.v0().y), CanvasPoint(sideV0ToV1[i], i + triangle.v0().y),window, fillColour);
     }
 
-    for (size_t i = 0; i < sideV1ToV2.size(); i++) {
+    for (size_t i = 0; i < sideExtraToV2.size(); i++) {
         // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
         drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y), window, fillColour);
     }
 
     drawTriangle(triangle, fillColour, window);
+
+    // draw white line border
+    Colour whiteBorder = Colour(255, 255, 255);
+    drawLine(triangle.vertices[0], triangle.vertices[1], window, whiteBorder);
+    drawLine(triangle.vertices[0], triangle.vertices[2], window, whiteBorder);
+    drawLine(triangle.vertices[1], triangle.vertices[2], window, whiteBorder);
 
     // cut the triangle in half by drawing a line in the middle
     //drawLine()
