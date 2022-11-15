@@ -9,6 +9,9 @@
 #include <CanvasTriangle.h>
 #include <CanvasPoint.h>
 #include <cstdlib>
+#include <iostream>
+#include <fstream>
+#include <ModelTriangle.h>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -78,7 +81,6 @@ void drawLine(CanvasPoint from, CanvasPoint to, DrawingWindow &window, Colour co
         //float z = 1 / (from.depth + (zStepSize * i));
         window.setPixelColour(round(x), round(y), colourPacking(colour));
         //(0, 127)
-
     }
 }
 
@@ -145,6 +147,51 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillC
     //drawLine()
 }
 
+std::vector<ModelTriangle> readMTLFile (const std::string& filename) {
+    std::ifstream readFile(filename);
+    std::string line;
+    std::vector<glm::vec3> mtlVertices;
+    std::map<std::string, Colour> palette;
+
+    while (std::getline(readFile, line)) {
+        std::cout << line << std::endl;
+        auto tokens = split(line, ' ');
+
+        if (tokens[0] == "newmtl") {
+            palette.push_back()
+        }
+
+    }
+
+
+}
+
+// scaleFloat -> scales the position of all vertices at the point at which they are read in from the file, adjust the size of the model when it is loaded.
+std::vector<ModelTriangle> readOBJFile (const std::string& filename, float scaleFloat) {
+    std::ifstream readFile(filename);
+    std::string line;
+    std::vector<glm::vec3> objVertices;
+    std::vector<ModelTriangle> triangles;
+    Colour currentColour;
+
+    while (std::getline(readFile, line)) {
+        std::cout << line << std::endl;
+
+        auto tokens = split(line, ' ');
+
+        if (tokens[0] == "v") {
+            objVertices.push_back(glm::vec3(std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3])) * scaleFloat);
+        }
+        else if (tokens[0] == "f") {
+            std::cout << "c" << currentColour << std::endl;
+            triangles.push_back(ModelTriangle(objVertices[std::stoi(tokens[1]) - 1], objVertices[std::stoi(tokens[2]) - 1], objVertices[std::stoi(tokens[3]) - 1], currentColour));
+        }
+        else if (tokens[0] == "usemtl") {
+            // call readMTLFile() to access the palette
+        }
+    }
+}
+
 void draw(DrawingWindow &window) {
 //	window.clearPixels();
 //    std::vector<float> result = interpolateSingleFloats(255, 0, window.width);
@@ -208,6 +255,8 @@ void handleEvent(SDL_Event event, DrawingWindow &window) {
 int main(int argc, char *argv[]) {
 //    glm::vec3 from(1.0, 4.0, 9.2);
 //    glm::vec3 to(4.0, 1.0, 9.8);
+    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 10.35);
+
 
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
     SDL_Event event;
