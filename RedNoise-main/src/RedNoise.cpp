@@ -12,6 +12,7 @@
 #include <iostream>
 #include <fstream>
 #include <ModelTriangle.h>
+#include <map>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -147,36 +148,36 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillC
     //drawLine()
 }
 
-std::vector<ModelTriangle> readMTLFile (const std::string& filename) {
+std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     std::ifstream readFile(filename);
     std::string line;
-    std::vector<glm::vec3> mtlVertices;
-    std::map<std::string, Colour> palette;
+    std::map<std::string, Colour> getPalette;
+    Colour getColour;
 
     while (std::getline(readFile, line)) {
         std::cout << line << std::endl;
         auto tokens = split(line, ' ');
 
         if (tokens[0] == "newmtl") {
-            palette.push_back()
+            getColour.name = tokens[1];
         }
-
+        else if (tokens[0] == "Kd") {
+            getPalette.insert({getColour.name, Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255)});
+        }
     }
-
-
+    return getPalette;
 }
 
 // scaleFloat -> scales the position of all vertices at the point at which they are read in from the file, adjust the size of the model when it is loaded.
-std::vector<ModelTriangle> readOBJFile (const std::string& filename, float scaleFloat) {
+std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleFloat) {
     std::ifstream readFile(filename);
     std::string line;
     std::vector<glm::vec3> objVertices;
     std::vector<ModelTriangle> triangles;
     Colour currentColour;
+    std::map<std::string, Colour> palette;
 
     while (std::getline(readFile, line)) {
-        std::cout << line << std::endl;
-
         auto tokens = split(line, ' ');
 
         if (tokens[0] == "v") {
@@ -188,8 +189,17 @@ std::vector<ModelTriangle> readOBJFile (const std::string& filename, float scale
         }
         else if (tokens[0] == "usemtl") {
             // call readMTLFile() to access the palette
+            //std::vector<ModelTriangle> readMTLFile("cornell-box.mtl");
+            std::cout << line << std::endl;
+            currentColour = palette[tokens[1]];
+
+        }
+        else if (tokens[0] == "mtllib") {
+            std::cout << line << std::endl;
+            palette = readMTLFile(tokens[1]);
         }
     }
+    return triangles;
 }
 
 void draw(DrawingWindow &window) {
