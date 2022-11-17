@@ -148,6 +148,7 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, Colour fillC
     //drawLine()
 }
 
+// Reading the mtl file and getting the information of colours for the palette
 std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     std::ifstream readFile(filename);
     std::string line;
@@ -168,6 +169,7 @@ std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     return getPalette;
 }
 
+// Reading the obj file with the already extracted information from the mtl file
 // scaleFloat -> scales the position of all vertices at the point at which they are read in from the file, adjust the size of the model when it is loaded.
 std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleFloat) {
     std::ifstream readFile(filename);
@@ -201,6 +203,26 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     }
     return triangles;
 }
+
+// Projecting on to the image plane
+// initial camera position: (0.0, 0.0, 4.0) -> store in vec3 variable
+// focal length: distance = 2.0 (constant)
+CanvasPoint getCanvasIntersectionPoint(glm::vec3 cameraPosition, glm::vec3 vertexPosition, float focalLength, float posRange = 1) {
+    CanvasPoint result_imagePlanePosition(float u, float v);
+
+    vertexPosition = cameraPosition - vertexPosition;
+//    vec3<float, (glm::precision)> distance_x = cameraPosition[0] - vertexPosition[0];
+//    vec3<float, (glm::precision)> distance_y = cameraPosition[1] - vertexPosition[1];
+//    vec3<float, (glm::precision)> distance_z = cameraPosition[2] - vertexPosition[2];
+
+   float u = focalLength * (vertexPosition[0] / vertexPosition[2]) * (-1) * posRange + (WIDTH / 2);
+   float v = focalLength * (vertexPosition[1] / vertexPosition[2]) * (-1) * posRange + (HEIGHT / 2);
+
+//    result_imagePlanePosition.push_back(position_u);
+//    result_imagePlanePosition.push_back(position_v);
+    return CanvasPoint(u, v);
+}
+
 
 void draw(DrawingWindow &window) {
 //	window.clearPixels();
