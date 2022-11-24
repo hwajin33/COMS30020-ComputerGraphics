@@ -13,7 +13,7 @@
 #include <fstream>
 #include <ModelTriangle.h>
 #include <map>
-#include <TextureMap.h>
+//#include <TexturMap.h>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -22,7 +22,6 @@ using namespace std;
 
 glm::vec3 cameraPosition = glm::vec3(0.0, 0.0, 4.0);
 float focalLength = 2.0;
-CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + ((triangle.v1().y - triangle.v0().y) * ratio)), triangle.v1().y, triangle.v1().depth);
 
 // returns an evenly spaced list (as a vector) of size numberOfValues
 std::vector<float> interpolateSingleFloats(float from, float to, size_t numberOfValues) {
@@ -121,23 +120,8 @@ void randomTriangle(DrawingWindow &window, std::vector<std::vector<float>>& dist
     drawTriangle(randomVertices(), distance, randomColour(), window);
 }
 
-void drawInterpolatedSides(CanvasPoint extraPoint, std::vector<float>& side1, std::vector<float>& side2, std::vector<float>& side3, std::vector<float>& side4, DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour) {
-    for (size_t i = 0; i < side1.size(); i++) {
-        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
-        auto from = interpolation(side1[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, triangle.v1().depth);
-        auto end = interpolation(side2[i], triangle.v0().x, triangle.v1().x, triangle.v0().depth, triangle.v1().depth);
-        drawLine(CanvasPoint(side1[i], i + triangle.v0().y, from), CanvasPoint(side2[i], i + triangle.v0().y, end), distance, window, fillColour);
-    }
-
-    for (size_t i = 0; i < side4.size(); i++) {
-        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
-        auto from = interpolation(side4[i], extraPoint.x, triangle.v2().x, extraPoint.depth, triangle.v2().depth);
-        auto end = interpolation(side3[i], triangle.v1().x, triangle.v2().x, triangle.v1().depth, triangle.v2().depth);
-        drawLine(CanvasPoint(side4[i], i + triangle.v1().y, from), CanvasPoint(side3[i], i + triangle.v1().y, end), distance, window, fillColour);
-    }
-}
-
-void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPoint& extraPoint,std::vector<std::vector<float>>& distance, Colour fillColour) {
+void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour) {
+//    std::cout << "fillInTriangle is called" << std::endl;
     // sort the vertices
     if (triangle.v0().y > triangle.v1().y) {
         swap(triangle.vertices[0], triangle.vertices[1]);
@@ -157,7 +141,7 @@ void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPo
     float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
 
     // calculate the extra point
-//    extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
+    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
 
 //    float diff_1 = triangle.v1().y - triangle.v0().y + 1; ??
     float diff_1 = triangle.v1().y - triangle.v0().y;
@@ -169,25 +153,29 @@ void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPo
     std::vector<float> sideV1ToV2 = interpolateSingleFloats(triangle.v1().x, triangle.v2().x, diff_2);
     std::vector<float> sideExtraToV2 = interpolateSingleFloats(extraPoint.x, triangle.v2().x, diff_2);
 
-    drawInterpolatedSides(extraPoint, sideV0ToExtra, sideV0ToV1, sideV1ToV2, sideExtraToV2, window, triangle, distance, fillColour);
-}
+//    std::cout << "interpolating is done" << std::endl;
 
-void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, CanvasPoint& extraPoint, std::vector<std::vector<float>>& distance, Colour fillColour) {
-    interpolatingSides(window, triangle, extraPoint, distance, fillColour);
+    for (size_t i = 0; i < sideV0ToExtra.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        auto from = interpolation(sideV0ToExtra[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, triangle.v1().depth);
+        auto end = interpolation(sideV0ToV1[i], triangle.v0().x, triangle.v1().x, triangle.v0().depth, triangle.v1().depth);
+        drawLine(CanvasPoint(sideV0ToExtra[i], i + triangle.v0().y, from), CanvasPoint(sideV0ToV1[i], i + triangle.v0().y, end), distance, window, fillColour);
+    }
+
+    for (size_t i = 0; i < sideExtraToV2.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        auto from = interpolation(sideExtraToV2[i], extraPoint.x, triangle.v2().x, extraPoint.depth, triangle.v2().depth);
+        auto end = interpolation(sideV1ToV2[i], triangle.v1().x, triangle.v2().x, triangle.v1().depth, triangle.v2().depth);
+        drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y, from), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y, end), distance, window, fillColour);
+    }
+
     drawTriangle(triangle, distance,fillColour, window);
+
     // draw white line border
 //    Colour whiteBorder = Colour(255, 255, 255);
 //    drawLine(triangle.vertices[0], triangle.vertices[1], distance, window, whiteBorder);
 //    drawLine(triangle.vertices[0], triangle.vertices[2], distance, window, whiteBorder);
 //    drawLine(triangle.vertices[1], triangle.vertices[2], distance, window, whiteBorder);
-}
-
-void fillInTriangle_texture(CanvasPoint& extraPoint, DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour, TextureMap& textureMap) {
-    interpolatingSides(window, triangle, extraPoint,distance, fillColour);
-    float x_extraPoint = interpolation(extraPoint.x, triangle.v2().x, triangle.v0().x, triangle.v2().texturePoint.x, triangle.v0().texturePoint.x);
-    float y_extraPoint = interpolation(extraPoint.y, triangle.v2().y, triangle.v0().y, triangle.v2().texturePoint.y, triangle.v0().texturePoint.y);
-
-
 }
 
 // Reading the mtl file and getting the information of colours for the palette
@@ -272,7 +260,7 @@ void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vecto
     }
 }
 
-void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window, CanvasPoint& extraPoint) {
+void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     CanvasTriangle triangle;
     for(auto modelTriangle : modelTriangles) {
         auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
@@ -281,9 +269,7 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
 
         triangle = CanvasTriangle(v_0, v_1, v_2);
 
-        //DrawingWindow& window, CanvasTriangle triangle, CanvasPoint extraPoint,
-        // std::vector<std::vector<float>>& distance, Colour fillColour
-        fillInTriangle(window, triangle, extraPoint, distance, modelTriangle.colour);
+        fillInTriangle(window, triangle, distance, modelTriangle.colour);
     }
 
 //    std::cout << "done wireframeColour" << std::endl;
@@ -331,7 +317,7 @@ void draw(DrawingWindow &window) {
 
 }
 
-void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window, CanvasPoint& extraPoint, TextureMap& textureMap) {
+void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
         else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
@@ -341,9 +327,7 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
             randomTriangle(window, distance);
         }
         else if (event.key.keysym.sym == SDLK_f) {
-            //DrawingWindow& window, CanvasTriangle triangle, CanvasPoint extraPoint,
-            // std::vector<std::vector<float>>& distance, Colour fillColour
-            fillInTriangle(window, randomVertices(), extraPoint, distance, randomColour(), textureMap);
+            fillInTriangle(window, randomVertices(), distance, randomColour());
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
@@ -359,8 +343,6 @@ int main(int argc, char *argv[]) {
 
     std::vector<std::vector<float>> distance(HEIGHT);
 
-    CanvasPoint extraPoint =
-
     for (size_t i = 0; i < HEIGHT; i++) {
         distance[i] = std::vector<float> (WIDTH);
     }
@@ -368,19 +350,19 @@ int main(int argc, char *argv[]) {
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
 
     std::cout << obj.size() << std::endl;
-    //std::cout << i << std::endl;
-    //std::cout << obj[i] << std::endl;  --> don't need this?
+        //std::cout << i << std::endl;
+        //std::cout << obj[i] << std::endl;  --> don't need this?
 
-    //    auto v0 = getCanvasIntersectionPoint(obj[i].vertices[0], 180);
-    //    auto v1 = getCanvasIntersectionPoint(obj[i].vertices[1], 180);
-    //    auto v2 = getCanvasIntersectionPoint(obj[i].vertices[2], 180);
+        //    auto v0 = getCanvasIntersectionPoint(obj[i].vertices[0], 180);
+        //    auto v1 = getCanvasIntersectionPoint(obj[i].vertices[1], 180);
+        //    auto v2 = getCanvasIntersectionPoint(obj[i].vertices[2], 180);
 
-    //    window.setPixelColour(v0.x, v0.y, colourPacking(Colour(255, 255, 255)));
-    //    window.setPixelColour(v1.x, v1.y, colourPacking(Colour(255, 255, 255)));
-    //    window.setPixelColour(v2.x, v2.y, colourPacking(Colour(255, 255, 255)));
+        //    window.setPixelColour(v0.x, v0.y, colourPacking(Colour(255, 255, 255)));
+        //    window.setPixelColour(v1.x, v1.y, colourPacking(Colour(255, 255, 255)));
+        //    window.setPixelColour(v2.x, v2.y, colourPacking(Colour(255, 255, 255)));
 
-    //wireframe(obj[i], distance, window);
-    wireframeColour(obj, distance, window);
+        //wireframe(obj[i], distance, window);
+        wireframeColour(obj, distance, window);
 
     std::cout << "done" << std::endl;
 
