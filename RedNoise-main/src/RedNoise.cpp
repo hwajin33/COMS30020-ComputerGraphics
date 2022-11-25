@@ -22,7 +22,6 @@ using namespace std;
 
 glm::vec3 cameraPosition = glm::vec3(0.0, 0.0, 4.0);
 float focalLength = 2.0;
-CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + ((triangle.v1().y - triangle.v0().y) * ratio)), triangle.v1().y, triangle.v1().depth);
 
 // returns an evenly spaced list (as a vector) of size numberOfValues
 std::vector<float> interpolateSingleFloats(float from, float to, size_t numberOfValues) {
@@ -61,7 +60,6 @@ vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, si
 
 float interpolation(float x, float x1, float x2, float y1, float y2) {
     return y1 + (x - x1)*((y2 - y1)/(x2 - x1));
-
 }
 
 uint32_t colourPacking(Colour col) {
@@ -81,6 +79,12 @@ CanvasTriangle randomVertices() {
     CanvasPoint v2 = CanvasPoint(rand()%WIDTH, rand()%HEIGHT);
     return CanvasTriangle(v0, v1, v2);
 }
+
+//uint32_t textureMap() {
+//    auto texturePixel = TextureMap("texture.ppm");
+//    texturePixel.pixels[]
+//
+//}
 
 // Drawing a line on the canvas
 void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>& distance, DrawingWindow &window, Colour colour) {
@@ -102,12 +106,16 @@ void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>&
         float z = 1 / (from.depth + (zStepSize * i));
 
         if(distance[y][x] < z) {
-            std::cout << "z is smaller" << std::endl;
+//            std::cout << "z is smaller" << std::endl;
             window.setPixelColour(round(x), round(y), colourSet);
             distance[y][x]  = z;
         }
 //        window.setPixelColour(round(x), round(y), colourSet);
     }
+}
+
+void texture_drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>& distance, DrawingWindow &window, TextureMap& textureMap) {
+
 }
 
 void drawTriangle(CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour triColour, DrawingWindow &window) {
@@ -121,23 +129,7 @@ void randomTriangle(DrawingWindow &window, std::vector<std::vector<float>>& dist
     drawTriangle(randomVertices(), distance, randomColour(), window);
 }
 
-void drawInterpolatedSides(CanvasPoint extraPoint, std::vector<float>& side1, std::vector<float>& side2, std::vector<float>& side3, std::vector<float>& side4, DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour) {
-    for (size_t i = 0; i < side1.size(); i++) {
-        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
-        auto from = interpolation(side1[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, triangle.v1().depth);
-        auto end = interpolation(side2[i], triangle.v0().x, triangle.v1().x, triangle.v0().depth, triangle.v1().depth);
-        drawLine(CanvasPoint(side1[i], i + triangle.v0().y, from), CanvasPoint(side2[i], i + triangle.v0().y, end), distance, window, fillColour);
-    }
-
-    for (size_t i = 0; i < side4.size(); i++) {
-        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
-        auto from = interpolation(side4[i], extraPoint.x, triangle.v2().x, extraPoint.depth, triangle.v2().depth);
-        auto end = interpolation(side3[i], triangle.v1().x, triangle.v2().x, triangle.v1().depth, triangle.v2().depth);
-        drawLine(CanvasPoint(side4[i], i + triangle.v1().y, from), CanvasPoint(side3[i], i + triangle.v1().y, end), distance, window, fillColour);
-    }
-}
-
-void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPoint& extraPoint,std::vector<std::vector<float>>& distance, Colour fillColour) {
+void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour) {
     // sort the vertices
     if (triangle.v0().y > triangle.v1().y) {
         swap(triangle.vertices[0], triangle.vertices[1]);
@@ -148,7 +140,7 @@ void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPo
     if (triangle.v1().y > triangle.v2().y) {
         swap(triangle.vertices[1], triangle.vertices[2]);
     }
-//    std::cout << "sorting is done" << std::endl;
+
     // finding the horizontal line of the triangle -> length of the bottom of the small triangle
     float x_difference = (triangle.v2().x) - (triangle.v0().x);
     float y_difference = (triangle.v2().y) - (triangle.v0().y);
@@ -157,7 +149,7 @@ void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPo
     float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
 
     // calculate the extra point
-//    extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
+    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
 
 //    float diff_1 = triangle.v1().y - triangle.v0().y + 1; ??
     float diff_1 = triangle.v1().y - triangle.v0().y;
@@ -169,12 +161,24 @@ void interpolatingSides(DrawingWindow& window, CanvasTriangle triangle, CanvasPo
     std::vector<float> sideV1ToV2 = interpolateSingleFloats(triangle.v1().x, triangle.v2().x, diff_2);
     std::vector<float> sideExtraToV2 = interpolateSingleFloats(extraPoint.x, triangle.v2().x, diff_2);
 
-    drawInterpolatedSides(extraPoint, sideV0ToExtra, sideV0ToV1, sideV1ToV2, sideExtraToV2, window, triangle, distance, fillColour);
-}
+//    std::cout << "interpolating is done" << std::endl;
 
-void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, CanvasPoint& extraPoint, std::vector<std::vector<float>>& distance, Colour fillColour) {
-    interpolatingSides(window, triangle, extraPoint, distance, fillColour);
+    for (size_t i = 0; i < sideV0ToExtra.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        auto estimatedY_from = interpolation(sideV0ToExtra[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, triangle.v1().depth);
+        auto estimatedY_to = interpolation(sideV0ToV1[i], triangle.v0().x, triangle.v1().x, triangle.v0().depth, triangle.v1().depth);
+        drawLine(CanvasPoint(sideV0ToExtra[i], i + triangle.v0().y, estimatedY_from), CanvasPoint(sideV0ToV1[i], i + triangle.v0().y, estimatedY_to), distance, window, fillColour);
+    }
+
+    for (size_t i = 0; i < sideExtraToV2.size(); i++) {
+        // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
+        auto estimatedY_from = interpolation(sideExtraToV2[i], extraPoint.x, triangle.v2().x, extraPoint.depth, triangle.v2().depth);
+        auto estimatedY_to = interpolation(sideV1ToV2[i], triangle.v1().x, triangle.v2().x, triangle.v1().depth, triangle.v2().depth);
+        drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y, estimatedY_from), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y, estimatedY_to), distance, window, fillColour);
+    }
+
     drawTriangle(triangle, distance,fillColour, window);
+
     // draw white line border
 //    Colour whiteBorder = Colour(255, 255, 255);
 //    drawLine(triangle.vertices[0], triangle.vertices[1], distance, window, whiteBorder);
@@ -182,11 +186,42 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, CanvasPoint&
 //    drawLine(triangle.vertices[1], triangle.vertices[2], distance, window, whiteBorder);
 }
 
-void fillInTriangle_texture(CanvasPoint& extraPoint, DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour, TextureMap& textureMap) {
-    interpolatingSides(window, triangle, extraPoint,distance, fillColour);
+void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour fillColour, TextureMap& textureMap) {
+    if (triangle.v0().y > triangle.v1().y) {
+        swap(triangle.vertices[0], triangle.vertices[1]);
+    }
+    if (triangle.v0().y > triangle.v2().y) {
+        swap(triangle.vertices[0], triangle.vertices[2]);
+    }
+    if (triangle.v1().y > triangle.v2().y) {
+        swap(triangle.vertices[1], triangle.vertices[2]);
+    }
+
+    float x_difference = (triangle.v2().x) - (triangle.v0().x);
+    float y_difference = (triangle.v2().y) - (triangle.v0().y);
+    float ratio = x_difference/y_difference;
+    float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
+    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
+
+    float diff_1 = triangle.v1().y - triangle.v0().y;
+    float diff_2 = triangle.v2().y - triangle.v1().y;
+
+    std::vector<float> sideV0ToExtra = interpolateSingleFloats(triangle.v0().x, extraPoint.x, diff_1);
+    std::vector<float> sideV0ToV1 = interpolateSingleFloats(triangle.v0().x, triangle.v1().x, diff_1);
+    std::vector<float> sideV1ToV2 = interpolateSingleFloats(triangle.v1().x, triangle.v2().x, diff_2);
+    std::vector<float> sideExtraToV2 = interpolateSingleFloats(extraPoint.x, triangle.v2().x, diff_2);
+
+    // linking between triangle vertices and positions on a texture map
     float x_extraPoint = interpolation(extraPoint.x, triangle.v2().x, triangle.v0().x, triangle.v2().texturePoint.x, triangle.v0().texturePoint.x);
     float y_extraPoint = interpolation(extraPoint.y, triangle.v2().y, triangle.v0().y, triangle.v2().texturePoint.y, triangle.v0().texturePoint.y);
 
+    for (size_t i = 0; i < diff_1; i++) {
+        CanvasPoint position_1(sideV0ToExtra[i], i + triangle.v0().y);
+        CanvasPoint position_2(sideV0ToV1[i], i + triangle.v0().y);
+        position_1.texturePoint = TexturePoint(interpolation(sideV0ToExtra[i], extraPoint.x, triangle.v0().x, x_extraPoint, triangle.v0().texturePoint.x),
+                                               interpolation(i + triangle.v0().y, extraPoint.y, triangle.v0().y, y_extraPoint, triangle.v0().texturePoint.y));
+
+    }
 
 }
 
@@ -272,7 +307,7 @@ void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vecto
     }
 }
 
-void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window, CanvasPoint& extraPoint) {
+void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     CanvasTriangle triangle;
     for(auto modelTriangle : modelTriangles) {
         auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
@@ -281,9 +316,7 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
 
         triangle = CanvasTriangle(v_0, v_1, v_2);
 
-        //DrawingWindow& window, CanvasTriangle triangle, CanvasPoint extraPoint,
-        // std::vector<std::vector<float>>& distance, Colour fillColour
-        fillInTriangle(window, triangle, extraPoint, distance, modelTriangle.colour);
+        fillInTriangle(window, triangle, distance, modelTriangle.colour);
     }
 
 //    std::cout << "done wireframeColour" << std::endl;
@@ -331,7 +364,7 @@ void draw(DrawingWindow &window) {
 
 }
 
-void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window, CanvasPoint& extraPoint, TextureMap& textureMap) {
+void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
         if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
         else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
@@ -341,9 +374,7 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
             randomTriangle(window, distance);
         }
         else if (event.key.keysym.sym == SDLK_f) {
-            //DrawingWindow& window, CanvasTriangle triangle, CanvasPoint extraPoint,
-            // std::vector<std::vector<float>>& distance, Colour fillColour
-            fillInTriangle(window, randomVertices(), extraPoint, distance, randomColour(), textureMap);
+            fillInTriangle(window, randomVertices(), distance, randomColour());
         }
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
@@ -358,8 +389,6 @@ int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 
     std::vector<std::vector<float>> distance(HEIGHT);
-
-    CanvasPoint extraPoint =
 
     for (size_t i = 0; i < HEIGHT; i++) {
         distance[i] = std::vector<float> (WIDTH);
