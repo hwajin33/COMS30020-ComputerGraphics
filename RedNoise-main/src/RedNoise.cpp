@@ -114,7 +114,7 @@ void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>&
     }
 }
 
-void texture_drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>& distance, DrawingWindow &window, TextureMap& tMap) {
+void texture_drawLine(CanvasPoint from, CanvasPoint to, DrawingWindow &window, TextureMap& tMap) {
     float xDistance = to.x - from.x;
     float yDistance = to.y - from.y;
     float numberOfSteps = max(abs(xDistance) + 1, abs(yDistance) + 1);
@@ -242,7 +242,7 @@ void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std:
         position_2.texturePoint = TexturePoint(interpolation(sideV0ToV1[i], triangle.v0().x, triangle.v1().x, triangle.v0().texturePoint.x, triangle.v1().texturePoint.x),
                                                interpolation(i + triangle.v0().y, triangle.v0().y, triangle.v1().y, triangle.v0().texturePoint.y, triangle.v1().texturePoint.y));
 
-        texture_drawLine(position_1, position_2, distance, window, textureMap);
+        texture_drawLine(position_1, position_2, window, textureMap);
     }
 
     for (size_t i = 0; i < diff_2; i++) {
@@ -253,7 +253,7 @@ void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std:
         position_2.texturePoint = TexturePoint(interpolation(sideV1ToV2[i], triangle.v2().x, triangle.v1().x, triangle.v2().texturePoint.x, triangle.v1().texturePoint.x),
                                                interpolation(i + triangle.v1().y, triangle.v2().y, triangle.v1().y, triangle.v2().texturePoint.y, triangle.v1().texturePoint.y));
 
-        texture_drawLine(position_1, position_2, distance,window, textureMap);
+        texture_drawLine(position_1, position_2,window, textureMap);
     }
     drawTriangle(triangle, distance, Colour(255, 255, 255), window);
 }
@@ -315,9 +315,23 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     return triangles;
 }
 
+//void camRotation(glm::vec3& position, glm::mat3 rotatingMatrix) {
+//    position *= rotatingMatrix;
+//}
+
 // Projecting on to the image plane
 // initial camera position: (0.0, 0.0, 4.0) -> store in vec3 variable
+// vertexPosition: 3D position of a single vertex (passed in as a vec3)
 // focal length: distance = 2.0 (constant)
+//CanvasPoint getCanvasIntersectionPoint(glm::mat3 cameraRotation, glm::vec3 cameraPosition, glm::vec3 vertexPosition, float focalLength, float posRange = 1) {
+//    glm::vec3 newCamVec = (cameraPosition - vertexPosition) * cameraRotation;
+//    float u = focalLength * (newCamVec.x / -newCamVec.z);
+//    float v = focalLength * (newCamVec.y / newCamVec.z) * posRange + (HEIGHT / 2);
+//    CanvasPoint newCamPosition = CanvasPoint(u * posRange + (WIDTH / 2), v * posRange + (HEIGHT / 2));
+//    newCamPosition.depth = newCamVec.z;
+//    return newCamPosition;
+//}
+
 CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange = 1) {
 
     vertexPosition = cameraPosition - vertexPosition;
@@ -329,6 +343,7 @@ CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange 
 
     return CanvasPoint(u, v, depth);
 }
+
 
 void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     for(ModelTriangle modelTriangle : modelTriangles) {
@@ -353,6 +368,10 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
     }
 
 //    std::cout << "done wireframeColour" << std::endl;
+}
+
+void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
+    cameraPosition = cameraPosition * rotationMat;
 }
 
 
@@ -426,7 +445,7 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < HEIGHT; i++) {
         distance[i] = std::vector<float> (WIDTH);
     }
-
+    // projecting W3 textureMap
      CanvasPoint p1(160, 10);
      p1.texturePoint = TexturePoint(195, 5);
      CanvasPoint p2(300, 230);
@@ -434,13 +453,9 @@ int main(int argc, char *argv[]) {
      CanvasPoint p3(10, 150);
      p3.texturePoint = TexturePoint(65, 330);
      TextureMap tex = TextureMap("texture.ppm");
+    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-
-    CanvasTriangle tex_triangle = CanvasTriangle(CanvasPoint(160, 10), CanvasPoint(300, 230), CanvasPoint(10, 150));
-
-//    // COMEBACK FOR LATER; Just need to pass in this function - not working at the moment
-//    texture_fillInTriangle(window, tex_triangle, distance, textureMap(tex, window.width, window.height));
 
     std::cout << obj.size() << std::endl;
     //std::cout << i << std::endl;
@@ -454,8 +469,8 @@ int main(int argc, char *argv[]) {
     //    window.setPixelColour(v1.x, v1.y, colourPacking(Colour(255, 255, 255)));
     //    window.setPixelColour(v2.x, v2.y, colourPacking(Colour(255, 255, 255)));
 
-    //wireframe(obj[i], distance, window);
-    wireframeColour(obj, distance, window);
+    //projecting the box
+//    wireframeColour(obj, distance, window);
 
     std::cout << "done" << std::endl;
 
