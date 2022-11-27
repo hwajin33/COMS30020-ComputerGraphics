@@ -453,7 +453,7 @@ int main(int argc, char *argv[]) {
      CanvasPoint p3(10, 150);
      p3.texturePoint = TexturePoint(65, 330);
      TextureMap tex = TextureMap("texture.ppm");
-    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
+//    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
 
@@ -470,7 +470,7 @@ int main(int argc, char *argv[]) {
     //    window.setPixelColour(v2.x, v2.y, colourPacking(Colour(255, 255, 255)));
 
     //projecting the box
-//    wireframeColour(obj, distance, window);
+    wireframeColour(obj, distance, window);
 
     std::cout << "done" << std::endl;
 
