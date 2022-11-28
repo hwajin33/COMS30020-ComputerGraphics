@@ -324,9 +324,8 @@ void camRotation(glm::vec3& cameraPosition, glm::mat3 rotatingMatrix) {
 }
 
 void camOrientation(glm::mat3 rotationMatrix, glm::mat3 orientation) {
-   orientation = rotationMatrix * orientation;
+    orientation = rotationMatrix * orientation;
 }
-
 
 // Projecting on to the image plane
 // initial camera position: (0.0, 0.0, 4.0) -> store in vec3 variable
@@ -345,19 +344,19 @@ CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange 
     return newCamPosition;
 }
 
-void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
-    for(ModelTriangle modelTriangle : modelTriangles) {
+void wireframe(ModelTriangle modelTriangle, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
+//    for(ModelTriangle modelTriangle : modelTriangles) {
         auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 240);
         auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 240);
         auto v_2 = getCanvasIntersectionPoint(modelTriangle.vertices[2], 240);
 
         drawTriangle(CanvasTriangle(v_0, v_1, v_2), distance, modelTriangle.colour, window);
-    }
+//    }
 }
 
-void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
+void wireframeColour(ModelTriangle modelTriangle, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     CanvasTriangle triangle;
-    for(auto modelTriangle : modelTriangles) {
+//    for(auto modelTriangle : modelTriangles) {
         auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
         auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 180);
         auto v_2 = getCanvasIntersectionPoint(modelTriangle.vertices[2], 180);
@@ -365,36 +364,35 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
         triangle = CanvasTriangle(v_0, v_1, v_2);
 
         fillInTriangle(window, triangle, distance, modelTriangle.colour);
-    }
+//    }
 }
 
 inline double getRadian(double degree) {
     return degree * (M_PI / 180.0);
 }
 
-void respectiveRotation(glm::mat3 rotateMat, double degree) {
-    double radian = degree * (M_PI / 180.0);
-
-}
-
 void respectiveRotationToX(double degree) {
+    double radian = degree * (M_PI / 180.0);
     glm::mat3 matrix = glm::mat3(1, 0, 0,
-                                 0, cos(degree), -sin(degree),
-                                 0, sin(degree), cos(degree));
+                                 0, cos(radian), -sin(radian),
+                                 0, sin(radian), cos(radian));
+    cameraOrientation = matrix * cameraOrientation;
 }
 
 void respectiveRotationToY(double degree) {
-    glm::mat3 matrix = glm::mat3(cos(degree), 0, sin(degree),
+    double radian = degree * (M_PI / 180.0);
+    glm::mat3 matrix = glm::mat3(cos(radian), 0, sin(radian),
                                  0, 1, 0,
-                                 -sin(degree), 0, cos(degree));
+                                 -sin(radian), 0, cos(radian));
+    cameraOrientation = matrix * cameraOrientation;
 }
 
 void draw(DrawingWindow &window) {
-	window.clearPixels();
-//    for (size_t i = 0; i < HEIGHT; i++) {
-//        // ask this part
-//        std::fill(distance[i].begin(), distance[i].end(), INT32_MIN);
-//    }
+    window.clearPixels();
+    for (size_t i = 0; i < HEIGHT; i++) {
+        // ask this part
+        std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
+    }
 }
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
@@ -437,29 +435,27 @@ int main(int argc, char *argv[]) {
         distance[i] = std::vector<float> (WIDTH);
     }
     // projecting W3 textureMap
-     CanvasPoint p1(160, 10);
-     p1.texturePoint = TexturePoint(195, 5);
-     CanvasPoint p2(300, 230);
-     p2.texturePoint = TexturePoint(395, 380);
-     CanvasPoint p3(10, 150);
-     p3.texturePoint = TexturePoint(65, 330);
-     TextureMap tex = TextureMap("texture.ppm");
+    CanvasPoint p1(160, 10);
+    p1.texturePoint = TexturePoint(195, 5);
+    CanvasPoint p2(300, 230);
+    p2.texturePoint = TexturePoint(395, 380);
+    CanvasPoint p3(10, 150);
+    p3.texturePoint = TexturePoint(65, 330);
+    TextureMap tex = TextureMap("texture.ppm");
 //    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
-
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
 
-    std::cout << obj.size() << std::endl;
-    //std::cout << i << std::endl;
-    //std::cout << obj[i] << std::endl;  --> don't need this?
+//    for (size_t i = 0; i < obj.size(); i++) {
+//        std::cout << obj.size() << std::endl;
+//        wireframeColour(obj[i], distance, window);
+//    }
 
-    //    auto v0 = getCanvasIntersectionPoint(obj[i].vertices[0], 180);
-    //    auto v1 = getCanvasIntersectionPoint(obj[i].vertices[1], 180);
-    //    auto v2 = getCanvasIntersectionPoint(obj[i].vertices[2], 180);
-
-    //    window.setPixelColour(v0.x, v0.y, colourPacking(Colour(255, 255, 255)));
-    //    window.setPixelColour(v1.x, v1.y, colourPacking(Colour(255, 255, 255)));
-    //    window.setPixelColour(v2.x, v2.y, colourPacking(Colour(255, 255, 255)));
+//    double radian = getRadian(1);
+//
+//    glm::mat3 matrix = glm::mat3(1, 0, 0,
+//                                 0, cos(radian), -sin(radian),
+//                                 0, sin(radian), cos(radian));
 
     //projecting the box
 //    wireframeColour(obj, distance, window);
@@ -468,16 +464,20 @@ int main(int argc, char *argv[]) {
 
     SDL_Event event;
 
-//    vector<glm::vec3> result;
-//    for (size_t i = 0; i < result.size(); i++) std::cout << result[i].x << " " << result[i].y << " " << result[i].z << std::endl;
-//    std::cout << std::endl;
 
     while (true) {
         // We MUST poll for events - otherwise the window will freeze !
         if (window.pollForInputEvents(event)) handleEvent(event, distance, window);
         draw(window);
 
-        wireframeColour(obj, distance, window);
+        for (size_t i = 0; i < obj.size(); i++) {
+            std::cout << obj.size() << std::endl;
+            wireframeColour(obj[i], distance, window);
+        }
+        window.renderFrame();
+//        camRotation(cameraPosition, matrix);
+
+//        wireframeColour(obj, distance, window);
 
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
         window.renderFrame();
