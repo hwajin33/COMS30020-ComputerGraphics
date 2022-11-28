@@ -20,7 +20,7 @@
 
 using namespace std;
 
-glm::vec3 cameraPosition = glm::vec3(0.0, 0.0, 4.0);
+glm::vec3 cameraPosition(0, 0, 4);
 float focalLength = 2.0;
 std::vector<std::vector<float>> distance(HEIGHT);
 glm::mat3 cameraOrientation = glm::mat3(1, 0, 0,
@@ -257,21 +257,24 @@ void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std:
 }
 
 // Reading the mtl file and getting the information of colours for the palette
+// Change the file reading func!!
 std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     std::ifstream readFile(filename);
     std::string line;
     std::map<std::string, Colour> getPalette;
+    std::string key;
     Colour getColour;
 
-    while (std::getline(readFile, line)) {
-        std::cout << line << std::endl;
+    while (!filename.eof()) {
+        std::getline(readFile, line);
         auto tokens = split(line, ' ');
 
         if (tokens[0] == "newmtl") {
             getColour.name = tokens[1];
         }
         else if (tokens[0] == "Kd") {
-            getPalette.insert({getColour.name, Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255)});
+            getPalette[key] = Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255);
+//            getPalette.insert({getColour.name, Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255)});
         }
     }
     return getPalette;
@@ -344,19 +347,15 @@ void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vecto
     }
 }
 
-void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
-    CanvasTriangle triangle;
-    for(auto modelTriangle : modelTriangles) {
-        auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
-        auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 180);
-        auto v_2 = getCanvasIntersectionPoint(modelTriangle.vertices[2], 180);
+void wireframeColour(ModelTriangle modelTriangle, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
 
-        triangle = CanvasTriangle(v_0, v_1, v_2);
+    auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
+    auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 180);
+    auto v_2 = getCanvasIntersectionPoint(modelTriangle.vertices[2], 180);
+
+    CanvasTriangle triangle = CanvasTriangle(v_0, v_1, v_2);
 
         fillInTriangle(window, triangle, distance, modelTriangle.colour);
-    }
-
-//    std::cout << "done wireframeColour" << std::endl;
 }
 
 void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
@@ -366,14 +365,38 @@ void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
 
 void draw(DrawingWindow &window) {
 //	window.clearPixels();
+
+    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+    std::cout << obj.size() << std::endl;
+    for (size_t i = 0; i < obj.size(); i++)
+    {
+        std::cout << i << std::endl;
+        std::cout << obj[i] << std::endl;
+        wireframeColour(obj[i], ::distance, window);
+
+    }
+
 }
+
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.sym == SDLK_LEFT) std::cout << "LEFT" << std::endl;
-        else if (event.key.keysym.sym == SDLK_RIGHT) std::cout << "RIGHT" << std::endl;
-        else if (event.key.keysym.sym == SDLK_UP) std::cout << "UP" << std::endl;
-        else if (event.key.keysym.sym == SDLK_DOWN) std::cout << "DOWN" << std::endl;
+        if (event.key.keysym.sym == SDLK_LEFT) {
+            cameraPosition[0] = cameraPosition[0] + 0.1;
+            std::cout << "LEFT" << std::endl;
+        }
+        else if (event.key.keysym.sym == SDLK_RIGHT) {
+            cameraPosition[0] = cameraPosition[0] - 0.1;
+            std::cout << "RIGHT" << std::endl;
+        }
+        else if (event.key.keysym.sym == SDLK_UP) {
+            cameraPosition[1] = cameraPosition[1] - 0.1;
+            std::cout << "UP" << std::endl;
+        }
+        else if (event.key.keysym.sym == SDLK_DOWN) {
+            cameraPosition[1] = cameraPosition[1] + 0.1;
+            std::cout << "DOWN" << std::endl;
+        }
         else if (event.key.keysym.sym == SDLK_u) {
             randomTriangle(window, distance);
         }
@@ -388,14 +411,10 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
 
 
 int main(int argc, char *argv[]) {
-//    glm::vec3 from(1.0, 4.0, 9.2);
-//    glm::vec3 to(4.0, 1.0, 9.8);
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
 
-    std::vector<std::vector<float>> distance(HEIGHT);
-
     for (size_t i = 0; i < HEIGHT; i++) {
-        distance[i] = std::vector<float> (WIDTH);
+        ::distance[i] = std::vector<float> (WIDTH);
     }
     // projecting W3 textureMap
     CanvasPoint p1(160, 10);
@@ -407,14 +426,15 @@ int main(int argc, char *argv[]) {
     TextureMap tex = TextureMap("texture.ppm");
 //    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
 
-    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+//    for (size_t i = 0; i < obj.size(); i++) {
+//        std::cout << obj[i] << std::endl;
+//        wireframeColour(obj[i], ::distance, window);
+//    }
 
-    std::cout << obj.size() << std::endl;
-    //std::cout << i << std::endl;
-    //std::cout << obj[i] << std::endl;  --> don't need this?
-
-    //projecting the box
-    wireframeColour(obj, distance, window);
+//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+////    projecting the box
+//    wireframeColour(obj, distance, window);
 
     std::cout << "done" << std::endl;
 
@@ -422,14 +442,9 @@ int main(int argc, char *argv[]) {
 
     while (true) {
         // We MUST poll for events - otherwise the window will freeze !
-        if (window.pollForInputEvents(event)) handleEvent(event, distance, window);
+        if (window.pollForInputEvents(event)) handleEvent(event, ::distance, window);
         draw(window);
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
         window.renderFrame();
-
-//        std::vector<float> result;
-//        result = interpolateSingleFloats(2.2, 8.5, 7);
-//        for(size_t i=0; i<result.size(); i++) std::cout << result[i] << " ";
-//        std::cout << std::endl;
     }
 }
