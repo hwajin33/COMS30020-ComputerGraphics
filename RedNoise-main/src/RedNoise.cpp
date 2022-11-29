@@ -297,10 +297,6 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     return triangles;
 }
 
-//void camRotation(glm::vec3& position, glm::mat3 rotatingMatrix) {
-//    position *= rotatingMatrix;
-//}
-
 // Projecting on to the image plane
 // initial camera position: (0.0, 0.0, 4.0) -> store in vec3 variable
 // vertexPosition: 3D position of a single vertex (passed in as a vec3)
@@ -339,14 +335,6 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
     }
 }
 
-void camRotation(glm::vec3& cameraPosition, glm::mat3 rotatingMatrix) {
-    cameraPosition = cameraPosition * rotatingMatrix;
-}
-
-void camOrientation(glm::mat3 rotationMatrix, glm::mat3 orientation) {
-    orientation = rotationMatrix * orientation;
-}
-
 inline double getRadian(double degree) {
     return degree * (M_PI / 180.0);
 }
@@ -367,6 +355,25 @@ void respectiveOrientationToY(double degree) {
     cameraOrientation = matrix * cameraOrientation;
 }
 
+// up = y
+// right = x
+// forward = -z
+void lookAt() {
+    // forward
+    cameraOrientation[2] = glm::normalize(cameraPosition);
+    // up
+    cameraOrientation[1] = glm::normalize(glm::cross(cameraOrientation[2], cameraOrientation[0]));
+    // right
+    cameraOrientation[0] = glm::normalize(glm::cross(glm::vec3(0, 1, 0), cameraOrientation[2]));
+}
+
+void camRotation() {
+    double radian = 1 * (M_PI / 180.0);
+    glm::mat3 rotatingMatrix = glm::mat3(cos(radian), 0, sin(radian),
+                                 0, 1, 0,
+                                 -sin(radian), 0, cos(radian));
+    cameraPosition = cameraPosition * rotatingMatrix;
+}
 
 void draw(DrawingWindow &window) {
 	window.clearPixels();
@@ -390,10 +397,10 @@ void draw(DrawingWindow &window) {
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
 //    projecting the box
     wireframeColour(obj, ::distance, window);
-
+    camRotation();
+    lookAt();
 
 }
-
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
@@ -401,6 +408,8 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         else if (event.key.keysym.sym == SDLK_RIGHT) cameraPosition[0] = cameraPosition[0] - 0.1;
         else if (event.key.keysym.sym == SDLK_UP) cameraPosition[1] = cameraPosition[1] - 0.1;
         else if (event.key.keysym.sym == SDLK_DOWN) cameraPosition[1] = cameraPosition[1] + 0.1;
+        else if (event.key.keysym.sym == SDLK_z) cameraPosition[2] = cameraPosition[2] + 0.1;
+        else if (event.key.keysym.sym == SDLK_a) cameraPosition[2] = cameraPosition[2] - 0.1;
         else if (event.key.keysym.sym == SDLK_x) respectiveOrientationToX(1);
         else if (event.key.keysym.sym == SDLK_s) respectiveOrientationToX(-1);
         else if (event.key.keysym.sym == SDLK_y) respectiveOrientationToY(1);
@@ -412,7 +421,6 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         window.saveBMP("output.bmp");
     }
 }
-
 
 int main(int argc, char *argv[]) {
     DrawingWindow window = DrawingWindow(WIDTH, HEIGHT, false);
