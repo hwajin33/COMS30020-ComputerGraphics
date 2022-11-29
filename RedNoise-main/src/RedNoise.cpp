@@ -14,6 +14,7 @@
 #include <ModelTriangle.h>
 #include <map>
 #include <TextureMap.h>
+#include <RayTriangleIntersection.h>
 
 #define WIDTH 320
 #define HEIGHT 240
@@ -372,6 +373,22 @@ void camRotation() {
                                  0, 1, 0,
                                  -sin(radian), 0, cos(radian));
     cameraPosition = cameraPosition * rotatingMatrix;
+}
+
+// getting the closest intersection
+RayTriangleIntersection getClosestIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> triangle) {
+    for (size_t i = 0; i < triangle.size(); i++) {
+        glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
+        glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
+        glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
+        glm::mat3 DEMatrix(-rayDirection, e0, e1);
+        glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
+    }
+    //        glm::vec3 intersectionPoint = cameraPosition - possibleSolution;
+
+    // put cameraPosition instead of glm::vec3(0, 0, 0) ????
+    RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle, -1);
+    return closestIntersection;
 }
 
 void draw(DrawingWindow &window) {
