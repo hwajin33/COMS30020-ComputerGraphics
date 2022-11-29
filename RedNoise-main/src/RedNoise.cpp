@@ -267,24 +267,26 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     std::ifstream readFile(filename);
     std::string line;
     std::vector<glm::vec3> objVertices;
+    std::vector<glm::vec3> vertices;
     std::vector<ModelTriangle> triangles;
     Colour currentColour;
     std::map<std::string, Colour> palette;
 
     while (std::getline(readFile, line)) {
         auto tokens = split(line, ' ');
-
         if (tokens[0] == "v") {
-            objVertices.push_back(glm::vec3(std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3])) * scaleFloat);
+            if (tokens.size() != 4) throw std::runtime_error("Vertex must have three coordinates");
+            auto one = std::stof(tokens[1]) * scaleFloat;
+            auto two = std::stof(tokens[2]) * scaleFloat;
+            auto three = std::stof(tokens[3]) * scaleFloat;
+            objVertices.emplace_back(one, two, three);
         }
         else if (tokens[0] == "f") {
-            std::cout << "c" << currentColour << std::endl;
-            triangles.push_back(ModelTriangle(objVertices[std::stoi(tokens[1]) - 1], objVertices[std::stoi(tokens[2]) - 1], objVertices[std::stoi(tokens[3]) - 1], currentColour));
-            std::cout << "triangles last element" << triangles.back() << std::endl;
+            ModelTriangle t1 = ModelTriangle(objVertices[std::stoi(tokens[1]) - 1], objVertices[std::stoi(tokens[2]) - 1], objVertices[std::stoi(tokens[3]) - 1], currentColour);
+            triangles.push_back(t1);
         }
         else if (tokens[0] == "usemtl") {
             // call readMTLFile() to access the palette
-            //std::vector<ModelTriangle> readMTLFile("cornell-box.mtl");
             std::cout << line << std::endl;
             currentColour = palette[tokens[1]];
 
@@ -355,9 +357,6 @@ void respectiveOrientationToY(double degree) {
     cameraOrientation = matrix * cameraOrientation;
 }
 
-// up = y
-// right = x
-// forward = -z
 void lookAt() {
     // forward
     cameraOrientation[2] = glm::normalize(cameraPosition);
