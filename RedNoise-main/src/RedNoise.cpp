@@ -339,8 +339,32 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
     }
 }
 
-void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
-    cameraPosition = cameraPosition * rotationMat;
+void camRotation(glm::vec3& cameraPosition, glm::mat3 rotatingMatrix) {
+    cameraPosition = cameraPosition * rotatingMatrix;
+}
+
+void camOrientation(glm::mat3 rotationMatrix, glm::mat3 orientation) {
+    orientation = rotationMatrix * orientation;
+}
+
+inline double getRadian(double degree) {
+    return degree * (M_PI / 180.0);
+}
+
+void respectiveOrientationToX(double degree) {
+    double radian = degree * (M_PI / 180.0);
+    glm::mat3 matrix = glm::mat3(1, 0, 0,
+                                 0, cos(radian), -sin(radian),
+                                 0, sin(radian), cos(radian));
+    cameraOrientation = matrix * cameraOrientation;
+}
+
+void respectiveOrientationToY(double degree) {
+    double radian = degree * (M_PI / 180.0);
+    glm::mat3 matrix = glm::mat3(cos(radian), 0, sin(radian),
+                                 0, 1, 0,
+                                 -sin(radian), 0, cos(radian));
+    cameraOrientation = matrix * cameraOrientation;
 }
 
 
@@ -373,38 +397,16 @@ void draw(DrawingWindow &window) {
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
-        if (event.key.keysym.sym == SDLK_LEFT) {
-            cameraPosition[0] = cameraPosition[0] + 0.1;
-            std::cout << "LEFT" << std::endl;
-        }
-        else if (event.key.keysym.sym == SDLK_RIGHT) {
-            cameraPosition[0] = cameraPosition[0] - 0.1;
-            std::cout << "RIGHT" << std::endl;
-        }
-        else if (event.key.keysym.sym == SDLK_UP) {
-            cameraPosition[1] = cameraPosition[1] - 0.1;
-            std::cout << "UP" << std::endl;
-        }
-        else if (event.key.keysym.sym == SDLK_DOWN) {
-            cameraPosition[1] = cameraPosition[1] + 0.1;
-            std::cout << "DOWN" << std::endl;
-        }
-        else if (event.key.keysym.sym == SDLK_x) {
-            cameraPosition = glm::mat3(1, 0, 0,
-                                       0, cos(0.1), -sin(0.1),
-                                       0, sin(0.1), cos(0.1)) * cameraPosition;
-        }
-        else if (event.key.keysym.sym == SDLK_y) {
-            cameraPosition = glm::mat3(cos(0.1), 0, sin(0.1),
-                                       0, 1, 0,
-                                       -sin(0.1), 0, cos(0.1)) * cameraPosition;
-        }
-        else if (event.key.keysym.sym == SDLK_u) {
-            randomTriangle(window, distance);
-        }
-        else if (event.key.keysym.sym == SDLK_f) {
-            fillInTriangle(window, randomVertices(), distance, randomColour());
-        }
+        if (event.key.keysym.sym == SDLK_LEFT) cameraPosition[0] = cameraPosition[0] + 0.1;
+        else if (event.key.keysym.sym == SDLK_RIGHT) cameraPosition[0] = cameraPosition[0] - 0.1;
+        else if (event.key.keysym.sym == SDLK_UP) cameraPosition[1] = cameraPosition[1] - 0.1;
+        else if (event.key.keysym.sym == SDLK_DOWN) cameraPosition[1] = cameraPosition[1] + 0.1;
+        else if (event.key.keysym.sym == SDLK_x) respectiveOrientationToX(1);
+        else if (event.key.keysym.sym == SDLK_s) respectiveOrientationToX(-1);
+        else if (event.key.keysym.sym == SDLK_y) respectiveOrientationToY(1);
+        else if (event.key.keysym.sym == SDLK_h) respectiveOrientationToY(-1);
+        else if (event.key.keysym.sym == SDLK_u) randomTriangle(window, distance);
+        else if (event.key.keysym.sym == SDLK_f) fillInTriangle(window, randomVertices(), distance, randomColour());
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
         window.saveBMP("output.bmp");
