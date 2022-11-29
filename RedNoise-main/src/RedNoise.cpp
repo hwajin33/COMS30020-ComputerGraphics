@@ -31,35 +31,19 @@ glm::mat3 cameraOrientation = glm::mat3(1, 0, 0,
 std::vector<float> interpolateSingleFloats(float from, float to, size_t numberOfValues) {
     std::vector<float> res;
     // if numberOfValues is 0, then return empty vector
-    if (numberOfValues == 0) {
-        return res;
-    }
-
-//    std::cout << "interpolateSingleFloats is called with " << from << " " << to << " " << numberOfValues << std::endl;
+    if (numberOfValues == 0)  return res;
     float betweenValue = (to - from)/float(numberOfValues);
-
-    for (int x = 0; x <= numberOfValues; x++) {
-        res.push_back(from);
-        from = from + betweenValue;
-    }
+    for (int i = 0; i <= numberOfValues; i++) res.push_back(from + i * betweenValue);
     return res;
 }
 
 // (x, y, z)
 vector<glm::vec3> interpolateThreeElementValues(glm::vec3 from, glm::vec3 to, size_t numberOfVectors) {
-    numberOfVectors = numberOfVectors - 1;
-    float x_interval = (to.x - from.x)/numberOfVectors;
-    float y_interval = (to.y - from.y)/numberOfVectors;
-    float z_interval = (to.z - from.z)/numberOfVectors;
-
-    vector<glm::vec3> result;
-
-    for (int x = 0; x <= numberOfVectors; x++) {
-        result.push_back(from);
-        from = from + glm::vec3(x_interval, y_interval, z_interval);
-    }
-
-    return result;
+    std::vector<glm::vec3> res;
+    if (numberOfVectors == 0)  return res;
+    glm::vec3 betweenValue = (to - from)/glm::vec3(numberOfVectors - 1);
+    for (int i = 0; i <= numberOfVectors; i++) res.push_back(from + glm::vec3(i) * betweenValue);
+    return res;
 }
 
 float interpolation(float x, float x1, float x2, float y1, float y2) {
@@ -92,7 +76,6 @@ uint32_t textureMap(TextureMap& tMap, size_t t_x, size_t t_y) {
 
 // Drawing a line on the canvas
 void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>& distance, DrawingWindow &window, Colour colour) {
-//    std::cout << "drawLine is called with " << from << to << std::endl;
     uint32_t colourSet = colourPacking(colour);
 
     float xDistance = to.x - from.x;
@@ -109,12 +92,10 @@ void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>&
         float y = round(from.y + (yStepSize * i));
         float z = 1 / (from.depth + (zStepSize * i));
 
-        if(distance[y][x] < z) {
-//            std::cout << "z is smaller" << std::endl;
+        if( x >= 0 && y >= 0 && y < distance.size() && x < distance[y].size() && distance[y][x] < z) {
             window.setPixelColour(round(x), round(y), colourSet);
             distance[y][x]  = z;
         }
-//        window.setPixelColour(round(x), round(y), colourSet);
     }
 }
 
@@ -167,16 +148,16 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<
     // finding the horizontal line of the triangle -> length of the bottom of the small triangle
     float x_difference = (triangle.v2().x) - (triangle.v0().x);
     float y_difference = (triangle.v2().y) - (triangle.v0().y);
-    float z_difference = (triangle.v2().depth) - (triangle.v0().depth);
     float ratio = x_difference/y_difference;
     float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
 
     // calculate the extra point
-    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
+    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y,
+                                         interpolation(triangle.v1().y, triangle.v0().y, triangle.v2().y, triangle.v0().depth, triangle.v2().depth));
 
 //    float diff_1 = triangle.v1().y - triangle.v0().y + 1; ??
-    float diff_1 = triangle.v1().y - triangle.v0().y;
-    float diff_2 = triangle.v2().y - triangle.v1().y;
+    float diff_1 = triangle.v1().y - triangle.v0().y + 1;
+    float diff_2 = triangle.v2().y - triangle.v1().y + 1;
 
     // getting the position of the x coordinate to draw the line horizontally
     std::vector<float> sideV0ToExtra = interpolateSingleFloats(triangle.v0().x, extraPoint.x, diff_1);
@@ -188,7 +169,7 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<
 
     for (size_t i = 0; i < sideV0ToExtra.size(); i++) {
         // adding the y-coordinates with the side x-coordinate to get the position of the diagonal line
-        auto estimatedY_from = interpolation(sideV0ToExtra[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, triangle.v1().depth);
+        auto estimatedY_from = interpolation(sideV0ToExtra[i], triangle.v0().x, extraPoint.x, triangle.v0().depth, extraPoint.depth);
         auto estimatedY_to = interpolation(sideV0ToV1[i], triangle.v0().x, triangle.v1().x, triangle.v0().depth, triangle.v1().depth);
         drawLine(CanvasPoint(sideV0ToExtra[i], i + triangle.v0().y, estimatedY_from), CanvasPoint(sideV0ToV1[i], i + triangle.v0().y, estimatedY_to), distance, window, fillColour);
     }
@@ -200,7 +181,7 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<
         drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y, estimatedY_from), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y, estimatedY_to), distance, window, fillColour);
     }
 
-    drawTriangle(triangle, distance,fillColour, window);
+//    drawTriangle(triangle, distance,fillColour, window);
 }
 
 void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, TextureMap& textureMap) {
@@ -265,12 +246,12 @@ std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     std::string key;
     Colour getColour;
 
-    while (!filename.eof()) {
+    while (!readFile.eof()) {
         std::getline(readFile, line);
         auto tokens = split(line, ' ');
 
         if (tokens[0] == "newmtl") {
-            getColour.name = tokens[1];
+            key = tokens[1];
         }
         else if (tokens[0] == "Kd") {
             getPalette[key] = Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255);
@@ -325,15 +306,13 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
 // vertexPosition: 3D position of a single vertex (passed in as a vec3)
 // focal length: distance = 2.0 (constant)
 CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange = 1) {
+    glm::vec3 newCamVec = (cameraPosition - vertexPosition) * cameraOrientation;
 
-    vertexPosition = cameraPosition - vertexPosition;
-
-    //std::cout << vertexPosition << std::endl;
-    float u = focalLength * (vertexPosition[0] / vertexPosition[2]) * (-1) * posRange + (WIDTH / 2);
-    float v = focalLength * (vertexPosition[1] / vertexPosition[2]) * posRange + (HEIGHT / 2);
-    float depth = vertexPosition[2];
-
-    return CanvasPoint(u, v, depth);
+    float u = focalLength * (newCamVec.x / -newCamVec.z);
+    float v = focalLength * (newCamVec.y / newCamVec.z);
+    CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
+    newCamPosition.depth = newCamVec.z;
+    return newCamPosition;
 }
 
 
@@ -347,15 +326,17 @@ void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vecto
     }
 }
 
-void wireframeColour(ModelTriangle modelTriangle, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
-
+void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
+    CanvasTriangle triangle;
+    for(auto modelTriangle : modelTriangles) {
     auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 180);
     auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 180);
     auto v_2 = getCanvasIntersectionPoint(modelTriangle.vertices[2], 180);
 
-    CanvasTriangle triangle = CanvasTriangle(v_0, v_1, v_2);
+    triangle = CanvasTriangle(v_0, v_1, v_2);
 
-        fillInTriangle(window, triangle, distance, modelTriangle.colour);
+    fillInTriangle(window, triangle, distance, modelTriangle.colour);
+    }
 }
 
 void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
@@ -364,17 +345,28 @@ void CameraRotation(glm::vec3& cameraPosition, glm::mat3 rotationMat) {
 
 
 void draw(DrawingWindow &window) {
-//	window.clearPixels();
+	window.clearPixels();
+
+    // questions
+    for (size_t i = 0; i < HEIGHT; i++) {
+        // ask this part
+        std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
+    }
+
+//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+//    std::cout << obj.size() << std::endl;
+//    for (size_t i = 0; i < obj.size(); i++)
+//    {
+//        std::cout << i << std::endl;
+//        std::cout << obj[i] << std::endl;
+//        wireframeColour(obj[i], ::distance, window);
+//
+//    }
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-    std::cout << obj.size() << std::endl;
-    for (size_t i = 0; i < obj.size(); i++)
-    {
-        std::cout << i << std::endl;
-        std::cout << obj[i] << std::endl;
-        wireframeColour(obj[i], ::distance, window);
+//    projecting the box
+    wireframeColour(obj, ::distance, window);
 
-    }
 
 }
 
@@ -396,6 +388,16 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         else if (event.key.keysym.sym == SDLK_DOWN) {
             cameraPosition[1] = cameraPosition[1] + 0.1;
             std::cout << "DOWN" << std::endl;
+        }
+        else if (event.key.keysym.sym == SDLK_x) {
+            cameraPosition = glm::mat3(1, 0, 0,
+                                       0, cos(0.1), -sin(0.1),
+                                       0, sin(0.1), cos(0.1)) * cameraPosition;
+        }
+        else if (event.key.keysym.sym == SDLK_y) {
+            cameraPosition = glm::mat3(cos(0.1), 0, sin(0.1),
+                                       0, 1, 0,
+                                       -sin(0.1), 0, cos(0.1)) * cameraPosition;
         }
         else if (event.key.keysym.sym == SDLK_u) {
             randomTriangle(window, distance);
@@ -425,16 +427,6 @@ int main(int argc, char *argv[]) {
     p3.texturePoint = TexturePoint(65, 330);
     TextureMap tex = TextureMap("texture.ppm");
 //    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
-
-//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-//    for (size_t i = 0; i < obj.size(); i++) {
-//        std::cout << obj[i] << std::endl;
-//        wireframeColour(obj[i], ::distance, window);
-//    }
-
-//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-////    projecting the box
-//    wireframeColour(obj, distance, window);
 
     std::cout << "done" << std::endl;
 
