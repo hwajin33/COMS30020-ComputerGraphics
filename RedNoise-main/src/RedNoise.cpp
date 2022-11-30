@@ -276,7 +276,7 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     while (std::getline(readFile, line)) {
         auto tokens = split(line, ' ');
         if (tokens[0] == "v") {
-            if (tokens.size() != 4) throw std::runtime_error("Vertex must have three coordinates");
+            //if (tokens.size() != 4) throw std::runtime_error("Vertex must have three coordinates");
             auto one = std::stof(tokens[1]) * scaleFloat;
             auto two = std::stof(tokens[2]) * scaleFloat;
             auto three = std::stof(tokens[3]) * scaleFloat;
@@ -375,19 +375,31 @@ void camRotation() {
     cameraPosition = cameraPosition * rotatingMatrix;
 }
 
-// getting the closest intersection
+// return details of the closest intersected triangle - calculate the actual position of the intersection point
 RayTriangleIntersection getClosestIntersection(glm::vec3 rayDirection, std::vector<ModelTriangle> triangle) {
+    // put cameraPosition instead of glm::vec3(0, 0, 0) ????
+    RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle[0], -1);
+
     for (size_t i = 0; i < triangle.size(); i++) {
         glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
         glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
         glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
         glm::mat3 DEMatrix(-rayDirection, e0, e1);
+        //[t, u, v]
         glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
-    }
-    //        glm::vec3 intersectionPoint = cameraPosition - possibleSolution;
 
-    // put cameraPosition instead of glm::vec3(0, 0, 0) ????
-    RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle, -1);
+        if ((possibleSolution[1] >= 0.0) && (possibleSolution[1] <= 1.0)
+        && (possibleSolution[2] >= 0.0) && (possibleSolution[2] <= 1.0)
+        && (possibleSolution[1] + possibleSolution[2]) <= 1.0) {
+            // calculate the actual position of the intersection point
+            // r = s + t * d
+            closestIntersection.intersectionPoint = cameraPosition + possibleSolution[0] + rayDirection;
+            closestIntersection.intersectedTriangle = triangle[i];
+            closestIntersection.triangleIndex = i;
+            closestIntersection.distanceFromCamera = possibleSolution[0];
+        }
+    }
+//    return RayTriangleIntersection(possibleSolution, possibleSolution[0], triangle, -1);
     return closestIntersection;
 }
 
