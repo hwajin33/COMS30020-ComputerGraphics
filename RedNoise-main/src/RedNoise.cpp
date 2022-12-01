@@ -314,6 +314,74 @@ CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange 
     return newCamPosition;
 }
 
+// return details of the closest intersected triangle - calculate the actual position of the intersection point
+RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle) {
+    // put cameraPosition instead of glm::vec3(0, 0, 0) ????
+    RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle[0], -1);
+
+    for (size_t i = 0; i < triangle.size(); i++) {
+        glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
+        glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
+        glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
+        glm::mat3 DEMatrix(-rayDirection, e0, e1);
+        //[t, u, v]
+        glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
+
+        if ((possibleSolution[1] >= 0.0) && (possibleSolution[1] <= 1.0)
+            && (possibleSolution[2] >= 0.0) && (possibleSolution[2] <= 1.0)
+            && (possibleSolution[1] + possibleSolution[2]) <= 1.0 && possibleSolution[0] >= 0) {
+
+            if (possibleSolution[0] < closestIntersection.distanceFromCamera && possibleSolution[0] > 0) {
+                // calculate the actual position of the intersection point
+                // r = s + t * d
+                closestIntersection.intersectionPoint = cameraPosition + possibleSolution[0] * rayDirection;
+                closestIntersection.intersectedTriangle = triangle[i];
+                closestIntersection.triangleIndex = i;
+                closestIntersection.distanceFromCamera = possibleSolution[0];
+            }
+        }
+    }
+//    return RayTriangleIntersection(possibleSolution, possibleSolution[0], triangle, -1);
+    return closestIntersection;
+}
+
+// d = (r - s) / t
+// d = SPVector + possibleSolution[0](t) - possibleSolution[1](u) - possibleSolution[2](v)
+
+glm::vec3 getRayDirection(int pixelWidth, int pixelHeight, float focalLength, float posRange) {
+    //CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
+    glm::vec3 calcRayDirection;
+    // CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
+    calcRayDirection.x = (pixelWidth - (float(WIDTH)/2)) * 1.0 / posRange;
+    calcRayDirection.y = (pixelHeight - (float(HEIGHT)/2)) * -1.0 / posRange;
+    calcRayDirection.z = - focalLength;
+
+    return cameraOrientation * calcRayDirection;
+}
+
+//CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange = 1) {
+//    glm::vec3 newCamVec = (cameraPosition - vertexPosition) * cameraOrientation;
+//
+//    float u = focalLength * (newCamVec.x / -newCamVec.z);
+//    float v = focalLength * (newCamVec.y / newCamVec.z);
+//    CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
+//    newCamPosition.depth = newCamVec.z;
+//    return newCamPosition;
+//}
+
+
+void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, float focalLength, DrawingWindow& window) {
+//    uint32_t colourCurrentPixel = colourPacking(pixelColour);
+    for (size_t h = 0; h < window.height; h++) {
+        for (size_t w = 0; w < window.width; w++) {
+            glm::vec3 receiveRayDirection = getRayDirection(w, h, focalLength, posRange);
+            glm::vec3 rayDirection = glm::normalize(receiveRayDirection - cameraPosition);
+            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
+            receiveRayDirection = rayDirection * inverse(cameraOrientation);
+            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
+        }
+    }
+}
 
 void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     for(ModelTriangle modelTriangle : modelTriangles) {
@@ -371,72 +439,22 @@ void camRotation() {
     cameraPosition = cameraPosition * rotatingMatrix;
 }
 
-// return details of the closest intersected triangle - calculate the actual position of the intersection point
-RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle) {
-    // put cameraPosition instead of glm::vec3(0, 0, 0) ????
-    RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle[0], -1);
+void rayTrace_draw(std::vector<ModelTriangle> triangle, float posRange, float focalLength, DrawingWindow& window) {
+    window.clearPixels();
+    for (size_t h = 0; h < HEIGHT; h++) {
+        for (size_t w = 0; w < WIDTH; w++) {
+            glm::vec3 pixelPosition = getRayDirection(w, h, focalLength, posRange);
+            glm::vec3 rayDirection = glm::normalize(pixelPosition - cameraPosition);
+            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
 
-    for (size_t i = 0; i < triangle.size(); i++) {
-        glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
-        glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
-        glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
-        glm::mat3 DEMatrix(-rayDirection, e0, e1);
-        //[t, u, v]
-        glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
+            pixelPosition = rayDirection * inverse(cameraOrientation);
 
-        if ((possibleSolution[1] >= 0.0) && (possibleSolution[1] <= 1.0)
-        && (possibleSolution[2] >= 0.0) && (possibleSolution[2] <= 1.0)
-        && (possibleSolution[1] + possibleSolution[2]) <= 1.0) {
-            // calculate the actual position of the intersection point
-            // r = s + t * d
-            closestIntersection.intersectionPoint = cameraPosition + possibleSolution[0] + rayDirection;
-            closestIntersection.intersectedTriangle = triangle[i];
-            closestIntersection.triangleIndex = i;
-            closestIntersection.distanceFromCamera = possibleSolution[0];
-        }
-    }
-//    return RayTriangleIntersection(possibleSolution, possibleSolution[0], triangle, -1);
-    return closestIntersection;
-}
-
-// d = (r - s) / t
-// d = SPVector + possibleSolution[0](t) - possibleSolution[1](u) - possibleSolution[2](v)
-
-glm::vec3 getRayDirection(std::vector<ModelTriangle> triangle, int pixelWidth, int pixelHeight, float posRange = 1) {
-    //CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
-    glm::vec3 calcRayDirection;
-    // CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
-    calcRayDirection.x = (pixelWidth - (float(WIDTH)/2)) * 1.0 / posRange;
-    calcRayDirection.y = (pixelHeight - (float(HEIGHT)/2)) * 1.0 / posRange;
-    calcRayDirection.z = - posRange;
-
-//    for (size_t i = 0; i < triangle.size(); i++) {
-//        glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
-//        glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
-//        glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
-//        glm::mat3 DEMatrix(-rayDirection, e0, e1);
-//        glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
-//
-//        glm::vec3 calcRayDirection = (cameraPosition - triangle.vertices[0]) + possibleSolution[0] - possibleSolution[1] - possibleSolution[2];
-//    }
-   return cameraOrientation * calcRayDirection;
-}
-
-//window.setPixelColour()
-//            if (closestIntersectTriangle)
-void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, DrawingWindow& window) {
-//    uint32_t colourCurrentPixel = colourPacking(pixelColour);
-    for (size_t i = 0; i < window.height; i++) {
-        for (size_t j = 0; j < window.width; j++) {
-            glm::vec3 receiveRayDirection = glm::normalize(getRayDirection(triangle, j, i));
-            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(receiveRayDirection, triangle);
-//            window.setPixelColour(j, i, colourCurrentPixel);
-            window.setPixelColour(j, i, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
+            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
         }
     }
 }
 
-void draw(DrawingWindow &window) {
+void rasterising_draw(DrawingWindow &window) {
 	window.clearPixels();
 
     // questions
@@ -445,7 +463,7 @@ void draw(DrawingWindow &window) {
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
 
-//    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+//    std::vector<ModelTriangle> obj = readOBJFilfocalLengthe("cornell-box.obj", 0.35);
 //    std::cout << obj.size() << std::endl;
 //    for (size_t i = 0; i < obj.size(); i++)
 //    {
@@ -460,9 +478,6 @@ void draw(DrawingWindow &window) {
 //    wireframeColour(obj, ::distance, window);
 //    camRotation();
 //    lookAt();
-
-    drawRayTracingScene(obj, 270, window);
-
 }
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
@@ -491,6 +506,9 @@ int main(int argc, char *argv[]) {
     for (size_t i = 0; i < HEIGHT; i++) {
         ::distance[i] = std::vector<float> (WIDTH);
     }
+
+    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+
     // projecting W3 textureMap
     CanvasPoint p1(160, 10);
     p1.texturePoint = TexturePoint(195, 5);
@@ -508,7 +526,10 @@ int main(int argc, char *argv[]) {
     while (true) {
         // We MUST poll for events - otherwise the window will freeze !
         if (window.pollForInputEvents(event)) handleEvent(event, ::distance, window);
-        draw(window);
+//        draw(window);
+        rayTrace_draw(obj, 60, ::focalLength, window);
+
+//        drawRayTracingScene(obj, 170, ::focalLength, window);
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
         window.renderFrame();
     }
