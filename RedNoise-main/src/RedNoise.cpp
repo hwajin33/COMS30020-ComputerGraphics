@@ -182,7 +182,7 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<
         drawLine(CanvasPoint(sideExtraToV2[i], i + triangle.v1().y, estimatedY_from), CanvasPoint(sideV1ToV2[i], i + triangle.v1().y, estimatedY_to), distance, window, fillColour);
     }
 
-//    drawTriangle(triangle, distance,fillColour, window);
+//    drawTriangle(triangle, distance, fillColour, window);
 }
 
 void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, TextureMap& textureMap) {
@@ -256,7 +256,6 @@ std::map<std::string, Colour> readMTLFile(const std::string& filename) {
         }
         else if (tokens[0] == "Kd") {
             getPalette[key] = Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255);
-//            getPalette.insert({getColour.name, Colour(std::stof(tokens[1]) * 255, std::stof(tokens[2]) * 255, std::stof(tokens[3]) * 255)});
         }
     }
     return getPalette;
@@ -439,13 +438,16 @@ void camRotation() {
     cameraPosition = cameraPosition * rotatingMatrix;
 }
 
-void rayTrace_draw(std::vector<ModelTriangle> triangle, float posRange, float focalLength, DrawingWindow& window) {
+void rayTrace_draw(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSource, float posRange, float focalLength, DrawingWindow& window) {
     window.clearPixels();
     for (size_t h = 0; h < HEIGHT; h++) {
         for (size_t w = 0; w < WIDTH; w++) {
             glm::vec3 pixelPosition = getRayDirection(w, h, focalLength, posRange);
             glm::vec3 rayDirection = glm::normalize(pixelPosition - cameraPosition);
             RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
+
+            // start from here
+            //glm::vec3 lightDirection =
 
             pixelPosition = rayDirection * inverse(cameraOrientation);
 
