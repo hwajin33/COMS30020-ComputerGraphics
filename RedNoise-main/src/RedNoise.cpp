@@ -314,14 +314,14 @@ CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange 
 }
 
 // return details of the closest intersected triangle - calculate the actual position of the intersection point
-RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle) {
+RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle, glm::vec3 position) {
     // put cameraPosition instead of glm::vec3(0, 0, 0) ????
     RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle[0], -1);
 
     for (size_t i = 0; i < triangle.size(); i++) {
         glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
         glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
-        glm::vec3 SPVector = cameraPosition - triangle[i].vertices[0];
+        glm::vec3 SPVector = position - triangle[i].vertices[0];
         glm::mat3 DEMatrix(-rayDirection, e0, e1);
         //[t, u, v]
         glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
@@ -333,7 +333,7 @@ RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vec
             if (possibleSolution[0] < closestIntersection.distanceFromCamera && possibleSolution[0] > 0) {
                 // calculate the actual position of the intersection point
                 // r = s + t * d
-                closestIntersection.intersectionPoint = cameraPosition + possibleSolution[0] * rayDirection;
+                closestIntersection.intersectionPoint = position + possibleSolution[0] * rayDirection;
                 closestIntersection.intersectedTriangle = triangle[i];
                 closestIntersection.triangleIndex = i;
                 closestIntersection.distanceFromCamera = possibleSolution[0];
@@ -358,26 +358,21 @@ glm::vec3 getRayDirection(int pixelWidth, int pixelHeight, float focalLength, fl
     return cameraOrientation * calcRayDirection;
 }
 
-//CanvasPoint getCanvasIntersectionPoint(glm::vec3 vertexPosition, float posRange = 1) {
-//    glm::vec3 newCamVec = (cameraPosition - vertexPosition) * cameraOrientation;
-//
-//    float u = focalLength * (newCamVec.x / -newCamVec.z);
-//    float v = focalLength * (newCamVec.y / newCamVec.z);
-//    CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
-//    newCamPosition.depth = newCamVec.z;
-//    return newCamPosition;
-//}
-
-
-void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, float focalLength, DrawingWindow& window) {
-//    uint32_t colourCurrentPixel = colourPacking(pixelColour);
+void drawRayTracingScene(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSourcePosition, glm::vec3 position, float posRange, float focalLength, DrawingWindow& window) {
+    window.clearPixels();
     for (size_t h = 0; h < window.height; h++) {
         for (size_t w = 0; w < window.width; w++) {
-            glm::vec3 receiveRayDirection = getRayDirection(w, h, focalLength, posRange);
-            glm::vec3 rayDirection = glm::normalize(receiveRayDirection - cameraPosition);
-            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
-            receiveRayDirection = rayDirection * inverse(cameraOrientation);
-            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
+//            glm::vec3 receiveRayDirection = getRayDirection(w, h, focalLength, posRange);
+            glm::vec3 rayDirection = glm::normalize(getRayDirection(w, h, focalLength, posRange) - position);
+            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle, cameraPosition);
+//            rayDirection = rayDirection * inverse(cameraOrientation);  //???
+
+            glm::vec3 lightDirection = glm::normalize(closestIntersectTriangle.intersectionPoint - singleLightSourcePosition);
+            RayTriangleIntersection intersectedLightPoint = getClosestIntersection(lightDirection, triangle, singleLightSourcePosition);
+
+            if (closestIntersectTriangle.triangleIndex == intersectedLightPoint.triangleIndex) {
+                window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
+            }
         }
     }
 }
@@ -438,23 +433,23 @@ void camRotation() {
     cameraPosition = cameraPosition * rotatingMatrix;
 }
 
-void rayTrace_draw(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSource, float posRange, float focalLength, DrawingWindow& window) {
-    window.clearPixels();
-    for (size_t h = 0; h < HEIGHT; h++) {
-        for (size_t w = 0; w < WIDTH; w++) {
-            glm::vec3 pixelPosition = getRayDirection(w, h, focalLength, posRange);
-            glm::vec3 rayDirection = glm::normalize(pixelPosition - cameraPosition);
-            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
-
-            // start from here
-            //glm::vec3 lightDirection =
-
-            pixelPosition = rayDirection * inverse(cameraOrientation);
-
-            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
-        }
-    }
-}
+//void rayTrace_draw(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSource, float posRange, float focalLength, DrawingWindow& window) {
+//    window.clearPixels();
+//    for (size_t h = 0; h < HEIGHT; h++) {
+//        for (size_t w = 0; w < WIDTH; w++) {
+//            glm::vec3 pixelPosition = getRayDirection(w, h, focalLength, posRange);
+//            glm::vec3 rayDirection = glm::normalize(pixelPosition - cameraPosition);
+//            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
+//
+//            // start from here
+//            //glm::vec3 lightDirection =
+//
+//            pixelPosition = rayDirection * inverse(cameraOrientation);
+//
+//            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
+//        }
+//    }
+//}
 
 void rasterising_draw(DrawingWindow &window) {
 	window.clearPixels();
@@ -529,7 +524,8 @@ int main(int argc, char *argv[]) {
         // We MUST poll for events - otherwise the window will freeze !
         if (window.pollForInputEvents(event)) handleEvent(event, ::distance, window);
 //        draw(window);
-        rayTrace_draw(obj, 60, ::focalLength, window);
+
+        drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), cameraPosition, 60, ::focalLength, window); // change light source
 
 //        drawRayTracingScene(obj, 170, ::focalLength, window);
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
