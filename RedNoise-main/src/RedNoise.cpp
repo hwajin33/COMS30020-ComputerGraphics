@@ -17,9 +17,10 @@
 #include <RayTriangleIntersection.h>
 
 #define WIDTH 320
-#define HEIGHT 240
+#define HEIGHT 320
 
 using namespace std;
+
 
 glm::vec3 cameraPosition(0, 0, 4);
 float focalLength = 2.0;
@@ -27,6 +28,7 @@ std::vector<std::vector<float>> distance(HEIGHT);
 glm::mat3 cameraOrientation = glm::mat3(1, 0, 0,
                                         0, 1, 0,
                                         0, 0, 1);
+int render = 0;
 
 // returns an evenly spaced list (as a vector) of size numberOfValues
 std::vector<float> interpolateSingleFloats(float from, float to, size_t numberOfValues) {
@@ -358,12 +360,18 @@ glm::vec3 getRayDirection(int pixelWidth, int pixelHeight, float focalLength, fl
     return cameraOrientation * calcRayDirection;
 }
 
-void drawRayTracingScene(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSourcePosition, glm::vec3 position, float posRange, float focalLength, DrawingWindow& window) {
+void drawRayTracingScene(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSourcePosition, float posRange, float focalLength, DrawingWindow& window) {
     window.clearPixels();
+
+    for (size_t i = 0; i < HEIGHT; i++) {
+        // ask this part
+        std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
+    }
+
     for (size_t h = 0; h < window.height; h++) {
         for (size_t w = 0; w < window.width; w++) {
 //            glm::vec3 receiveRayDirection = getRayDirection(w, h, focalLength, posRange);
-            glm::vec3 rayDirection = glm::normalize(getRayDirection(w, h, focalLength, posRange) - position);
+            glm::vec3 rayDirection = glm::normalize(getRayDirection(w, h, focalLength, posRange) - cameraPosition);
             RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle, cameraPosition);
 //            rayDirection = rayDirection * inverse(cameraOrientation);  //???
 
@@ -378,6 +386,7 @@ void drawRayTracingScene(std::vector<ModelTriangle> triangle, glm::vec3 singleLi
 }
 
 void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
+    window.clearPixels();
     for(ModelTriangle modelTriangle : modelTriangles) {
         auto v_0 = getCanvasIntersectionPoint(modelTriangle.vertices[0], 240);
         auto v_1 = getCanvasIntersectionPoint(modelTriangle.vertices[1], 240);
@@ -453,28 +462,37 @@ void camRotation() {
 
 void rasterising_draw(DrawingWindow &window) {
 	window.clearPixels();
+    for (size_t i = 0; i < HEIGHT; i++) {
+        // ask this part
+        std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
+    }
+    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+    wireframeColour(obj, ::distance, window);  //    projecting the box
+//    camRotation();
+    lookAt();
+}
 
-    // questions
+void wireframe_draw(DrawingWindow &window) {
+    window.clearPixels();
     for (size_t i = 0; i < HEIGHT; i++) {
         // ask this part
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
 
-//    std::vector<ModelTriangle> obj = readOBJFilfocalLengthe("cornell-box.obj", 0.35);
-//    std::cout << obj.size() << std::endl;
-//    for (size_t i = 0; i < obj.size(); i++)
-//    {
-//        std::cout << i << std::endl;
-//        std::cout << obj[i] << std::endl;
-//        wireframeColour(obj[i], ::distance, window);
-//
-//    }
-
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-//    projecting the box
-//    wireframeColour(obj, ::distance, window);
-//    camRotation();
-//    lookAt();
+    wireframe(obj, ::distance, window);
+//    std::cout << "read obj" << std::endl;
+}
+
+// not really ued...
+void rayTrace_draw(glm::vec3 singleLightSourcePosition, float posRange, DrawingWindow window) {
+    window.clearPixels();
+    for (size_t i = 0; i < HEIGHT; i++) {
+        // ask this part
+        std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
+    }
+    std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
+    drawRayTracingScene(obj, singleLightSourcePosition, posRange, ::focalLength, window);
 }
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
@@ -491,6 +509,9 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         else if (event.key.keysym.sym == SDLK_h) respectiveOrientationToY(-1);
         else if (event.key.keysym.sym == SDLK_u) randomTriangle(window, distance);
         else if (event.key.keysym.sym == SDLK_f) fillInTriangle(window, randomVertices(), distance, randomColour());
+        else if (event.key.keysym.sym == SDLK_w) ::render = 1;
+        else if (event.key.keysym.sym == SDLK_r) ::render = 2;
+        else if (event.key.keysym.sym == SDLK_t) ::render = 3;
     } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
         window.saveBMP("output.bmp");
@@ -523,11 +544,24 @@ int main(int argc, char *argv[]) {
     while (true) {
         // We MUST poll for events - otherwise the window will freeze !
         if (window.pollForInputEvents(event)) handleEvent(event, ::distance, window);
-//        draw(window);
 
-        drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), cameraPosition, 60, ::focalLength, window); // change light source
+        switch (render) {
+            case 1:
+                wireframe_draw(window);
+                break;
+            case 2:
+                rasterising_draw(window);
+                break;
+            case 3:
+//                rayTrace_draw(glm::vec3(0, 0.5, 0.5), 60, window);
+                drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), 60, ::focalLength, window);
+                break;
+        }
 
-//        drawRayTracingScene(obj, 170, ::focalLength, window);
+//        wireframe(obj, ::distance, window);
+//        wireframe_draw(window);
+//        drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), 60, ::focalLength, window);
+
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
         window.renderFrame();
     }
