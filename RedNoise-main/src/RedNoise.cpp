@@ -241,7 +241,6 @@ void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std:
 }
 
 // Reading the mtl file and getting the information of colours for the palette
-// Change the file reading func!!
 std::map<std::string, Colour> readMTLFile(const std::string& filename) {
     std::ifstream readFile(filename);
     std::string line;
@@ -442,28 +441,9 @@ void camRotation() {
     cameraPosition = cameraPosition * rotatingMatrix;
 }
 
-//void rayTrace_draw(std::vector<ModelTriangle> triangle, glm::vec3 singleLightSource, float posRange, float focalLength, DrawingWindow& window) {
-//    window.clearPixels();
-//    for (size_t h = 0; h < HEIGHT; h++) {
-//        for (size_t w = 0; w < WIDTH; w++) {
-//            glm::vec3 pixelPosition = getRayDirection(w, h, focalLength, posRange);
-//            glm::vec3 rayDirection = glm::normalize(pixelPosition - cameraPosition);
-//            RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle);
-//
-//            // start from here
-//            //glm::vec3 lightDirection =
-//
-//            pixelPosition = rayDirection * inverse(cameraOrientation);
-//
-//            window.setPixelColour(w, h, colourPacking(closestIntersectTriangle.intersectedTriangle.colour));
-//        }
-//    }
-//}
-
 void rasterising_draw(DrawingWindow &window) {
 	window.clearPixels();
     for (size_t i = 0; i < HEIGHT; i++) {
-        // ask this part
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
@@ -475,20 +455,17 @@ void rasterising_draw(DrawingWindow &window) {
 void wireframe_draw(DrawingWindow &window) {
     window.clearPixels();
     for (size_t i = 0; i < HEIGHT; i++) {
-        // ask this part
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     wireframe(obj, ::distance, window);
-//    std::cout << "read obj" << std::endl;
 }
 
 // not really ued...
 void rayTrace_draw(glm::vec3 singleLightSourcePosition, float posRange, DrawingWindow window) {
     window.clearPixels();
     for (size_t i = 0; i < HEIGHT; i++) {
-        // ask this part
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
@@ -557,10 +534,6 @@ int main(int argc, char *argv[]) {
                 drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), 60, ::focalLength, window);
                 break;
         }
-
-//        wireframe(obj, ::distance, window);
-//        wireframe_draw(window);
-//        drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), 60, ::focalLength, window);
 
         // Need to render the frame at the end, or nothing actually gets shown on the screen !
         window.renderFrame();
