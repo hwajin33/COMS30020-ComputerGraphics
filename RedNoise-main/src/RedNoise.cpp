@@ -384,6 +384,15 @@ void drawRayTracingScene(std::vector<ModelTriangle> triangle, glm::vec3 singleLi
     }
 }
 
+void lookAt() {
+    // forward
+    cameraOrientation[2] = glm::normalize(cameraPosition);
+    // up
+    cameraOrientation[1] = glm::normalize(glm::cross(cameraOrientation[2], cameraOrientation[0]));
+    // right
+    cameraOrientation[0] = glm::normalize(glm::cross(glm::vec3(0, 1, 0), cameraOrientation[2]));
+}
+
 void wireframe(std::vector<ModelTriangle> modelTriangles, std::vector<std::vector<float>>& distance, DrawingWindow& window) {
     window.clearPixels();
     for(ModelTriangle modelTriangle : modelTriangles) {
@@ -408,29 +417,24 @@ void wireframeColour(std::vector<ModelTriangle> modelTriangles, std::vector<std:
     }
 }
 
+// won't activate when lookAt() is activated
 void respectiveOrientationToX(double degree) {
     double radian = degree * (M_PI / 180.0);
     glm::mat3 matrix = glm::mat3(1, 0, 0,
                                  0, cos(radian), -sin(radian),
                                  0, sin(radian), cos(radian));
     cameraOrientation = matrix * cameraOrientation;
+    lookAt();
 }
 
+// won't activate when lookAt() is activated
 void respectiveOrientationToY(double degree) {
     double radian = degree * (M_PI / 180.0);
     glm::mat3 matrix = glm::mat3(cos(radian), 0, sin(radian),
                                  0, 1, 0,
                                  -sin(radian), 0, cos(radian));
     cameraOrientation = matrix * cameraOrientation;
-}
-
-void lookAt() {
-    // forward
-    cameraOrientation[2] = glm::normalize(cameraPosition);
-    // up
-    cameraOrientation[1] = glm::normalize(glm::cross(cameraOrientation[2], cameraOrientation[0]));
-    // right
-    cameraOrientation[0] = glm::normalize(glm::cross(glm::vec3(0, 1, 0), cameraOrientation[2]));
+    lookAt();
 }
 
 void camRotation() {
@@ -449,7 +453,7 @@ void rasterising_draw(DrawingWindow &window) {
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     wireframeColour(obj, ::distance, window);  //    projecting the box
 //    camRotation();
-    lookAt();
+
 }
 
 void wireframe_draw(DrawingWindow &window) {
@@ -457,17 +461,19 @@ void wireframe_draw(DrawingWindow &window) {
     for (size_t i = 0; i < HEIGHT; i++) {
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
-
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     wireframe(obj, ::distance, window);
 }
 
 // not really ued...
-void rayTrace_draw(glm::vec3 singleLightSourcePosition, float posRange, DrawingWindow window) {
+void rayTrace_draw(DrawingWindow &window) {
     window.clearPixels();
     for (size_t i = 0; i < HEIGHT; i++) {
         std::fill(::distance[i].begin(), ::distance[i].end(), INT32_MIN);
     }
+
+    float posRange = 60;
+    glm::vec3 singleLightSourcePosition = glm::vec3(0, 0.5, 0.5);
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     drawRayTracingScene(obj, singleLightSourcePosition, posRange, ::focalLength, window);
 }
@@ -530,8 +536,7 @@ int main(int argc, char *argv[]) {
                 rasterising_draw(window);
                 break;
             case 3:
-//                rayTrace_draw(glm::vec3(0, 0.5, 0.5), 60, window);
-                drawRayTracingScene(obj, glm::vec3(0, 0.5, 0.5), 60, ::focalLength, window);
+                rayTrace_draw(window);
                 break;
         }
 
