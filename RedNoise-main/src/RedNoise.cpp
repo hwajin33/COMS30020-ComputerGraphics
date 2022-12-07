@@ -27,7 +27,7 @@ using namespace std;
 
 glm::vec3 cameraPosition(0, 0, 4);
 //glm::vec3 lightPosition = glm::vec3(0, 0.5, 1);
-glm::vec3 lightPosition = glm::vec3(0, 0.4, 0.5);
+glm::vec3 lightPosition = glm::vec3(0, 0.4, 0.6);
 float focalLength = 2.0;
 std::vector<std::vector<float>> distance(HEIGHT);
 glm::mat3 cameraOrientation = glm::mat3(1, 0, 0,
@@ -393,9 +393,9 @@ glm::vec3 getRayDirection(int pixelWidth, int pixelHeight, float focalLength, fl
 }
 
 // return details of the closest intersected triangle - calculate the actual position of the intersection point
-RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle, glm::vec3 position) {
+RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle, glm::vec3 position, int triangleIndex = -1) {
     RayTriangleIntersection closestIntersection = RayTriangleIntersection(glm::vec3(0, 0, 0), FLT_MAX, triangle[0], -1);
-
+    float t = FLT_MAX;
     for (size_t i = 0; i < triangle.size(); i++) {
         glm::vec3 e0 = triangle[i].vertices[1] - triangle[i].vertices[0];
         glm::vec3 e1 = triangle[i].vertices[2] - triangle[i].vertices[0];
@@ -404,17 +404,20 @@ RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vec
         //[t, u, v]
         glm::vec3 possibleSolution = glm::inverse(DEMatrix) * SPVector;
 
+        if (possibleSolution[0] < t) {
         if ((possibleSolution[1] >= 0.0) && (possibleSolution[1] <= 1.0)
             && (possibleSolution[2] >= 0.0) && (possibleSolution[2] <= 1.0)
-            && (possibleSolution[1] + possibleSolution[2]) <= 1.0 && possibleSolution[0] >= 0) {
-
-            if (possibleSolution[0] < closestIntersection.distanceFromCamera && possibleSolution[0] > 0) {
+            && (possibleSolution[1] + possibleSolution[2]) <= 1.0) {
+            if (possibleSolution[0] > 0 && triangleIndex != i) {
+                t = possibleSolution[0];
                 // calculate the actual position of the intersection point
                 // r = s + t * d
-                closestIntersection.intersectionPoint = position + possibleSolution[0] * rayDirection;
+                closestIntersection.intersectionPoint =
+                        triangle[i].vertices[0] + possibleSolution[1] * e0 + possibleSolution[2] * e1;
                 closestIntersection.intersectedTriangle = triangle[i];
                 closestIntersection.triangleIndex = i;
                 closestIntersection.distanceFromCamera = possibleSolution[0];
+            }
             }
         }
     }
@@ -433,7 +436,7 @@ float proximityLighting(glm::vec3 trianglePoint, glm::vec3 normal) {
 // used to adjust the brightness of each pixel
 float calcAngleOfLightIncidence(glm::vec3 trianglePoint, glm::vec3 normal) {
     glm::vec3 lightDirection = glm::normalize(lightPosition - trianglePoint);
-    float angleIncidence = glm::dot(normal, lightDirection);
+    float angleIncidence = std::max(0.0f, glm::dot(normal, lightDirection));
     if (angleIncidence > 1) angleIncidence = 1;
 
     return angleIncidence;
@@ -455,20 +458,20 @@ void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, fl
             RayTriangleIntersection closestIntersectTriangle = getClosestIntersection(rayDirection, triangle, cameraPosition);
 
             glm::vec3 lightDirection = glm::normalize(lightPosition - closestIntersectTriangle.intersectionPoint);
-            RayTriangleIntersection intersectedLightPoint = getClosestIntersection(lightDirection, triangle, lightPosition);
+            RayTriangleIntersection intersectedLightPoint = getClosestIntersection(lightDirection, triangle, closestIntersectTriangle.intersectionPoint, closestIntersectTriangle.triangleIndex);
 
             ModelTriangle getTriangle = closestIntersectTriangle.intersectedTriangle;
-            glm::vec3 edge_1 = getTriangle.vertices[0] - getTriangle.vertices[1];
-            glm::vec3 edge_2 = getTriangle.vertices[0] - getTriangle.vertices[2];
+            glm::vec3 edge_1 = getTriangle.vertices[1] - getTriangle.vertices[0];
+            glm::vec3 edge_2 = getTriangle.vertices[2] - getTriangle.vertices[0];
             getTriangle.normal = glm::cross(edge_1, edge_2);
 
-            if (closestIntersectTriangle.triangleIndex != intersectedLightPoint.triangleIndex) {  // shadow
+            if (intersectedLightPoint.distanceFromCamera >= glm::distance(lightPosition, closestIntersectTriangle.intersectionPoint) && closestIntersectTriangle.triangleIndex != intersectedLightPoint.triangleIndex) {  // shadow
 
     //            float angleOfIncidence = glm::dot(glm::normalize(singleLightSourcePosition - intersectPoint.intersectionPoint), triangle1.normal);
                 float angleOfIncidence = calcAngleOfLightIncidence(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
                 float brightness = proximityLighting(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
                 if (brightness < 0) brightness = 0;
-                float light = angleOfIncidence * brightness;
+                float light = brightness;
                 if (light < 0) light = 0;
 
 //                std::cout << "angleOfIncidence: " << angleOfIncidence << std::endl;
@@ -528,16 +531,19 @@ void rayTrace_draw(DrawingWindow &window) {
     float posRange = 60;
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     drawRayTracingScene(obj, posRange, ::focalLength, window);
+    camRotation();
     lookAt();
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
 
 //bool animation(DrawingWindow &window) {
 //    bool orbit = camRotation();
-//    if (camRotation() = true) {
+//    char imageBuffer(50);
 //
-//        window.savePPM("output.ppm");
-//        window.saveBMP("output.bmp");
-//    }
+//
+//    window.savePPM("output.ppm");
+//    window.saveBMP("output.bmp");
+//
 //}
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
@@ -563,7 +569,7 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         else if (event.key.keysym.sym == SDLK_k) lightPosition[1] -= 0.1;
         else if (event.key.keysym.sym == SDLK_m) lightPosition[2] += 0.1;
         else if (event.key.keysym.sym == SDLK_n) lightPosition[2] -= 0.1;
-    } else if (event.type == SDLK_0) {
+    } else if (event.type == SDL_MOUSEBUTTONDOWN) {
         window.savePPM("output.ppm");
         window.saveBMP("output.bmp");
         std::cout << "saving" << std::endl;
