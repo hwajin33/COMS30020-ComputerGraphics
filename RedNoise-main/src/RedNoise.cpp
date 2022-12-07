@@ -281,7 +281,6 @@ std::vector<ModelTriangle> readOBJFile(const std::string& filename, float scaleF
     while (std::getline(readFile, line)) {
         auto tokens = split(line, ' ');
         if (tokens[0] == "v") {
-            //if (tokens.size() != 4) throw std::runtime_error("Vertex must have three coordinates");
             auto one = std::stof(tokens[1]) * scaleFloat;
             auto two = std::stof(tokens[2]) * scaleFloat;
             auto three = std::stof(tokens[3]) * scaleFloat;
@@ -373,7 +372,6 @@ void respectiveOrientationToY(double degree) {
 }
 
 void camRotation() {
-//    double radian = speed;
     double radian = 1 * (M_PI / 180.0);
     glm::mat3 rotatingMatrix = glm::mat3(cos(radian), 0, sin(radian),
                                  0, 1, 0,
@@ -386,9 +384,7 @@ void camRotation() {
 // d = SPVector + possibleSolution[0](t) - possibleSolution[1](u) - possibleSolution[2](v)
 
 glm::vec3 getRayDirection(int pixelWidth, int pixelHeight, float focalLength, float posRange) {
-    //CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
     glm::vec3 calcRayDirection;
-    // CanvasPoint newCamPosition = CanvasPoint(u * posRange + WIDTH / 2, v * posRange + HEIGHT / 2);
     calcRayDirection.x = (pixelWidth - (float(WIDTH)/2)) * 1.0 / posRange;
     calcRayDirection.y = (pixelHeight - (float(HEIGHT)/2)) * -1.0 / posRange;
     calcRayDirection.z = - focalLength;
@@ -422,15 +418,8 @@ RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vec
             }
         }
     }
-//    return RayTriangleIntersection(possibleSolution, possibleSolution[0], triangle, -1);
     return closestIntersection;
 }
-
-//float lightToTriPoint_distance(glm::vec3& rayDirection, std::vector<ModelTriangle> triangle, glm::vec3 lightPosition) {
-//    RayTriangleIntersection intersectPoint = getClosestIntersection(rayDirection, triangle, lightPosition);
-//    auto distance = glm::length(lightPosition - intersectPoint.intersectionPoint);
-//    return distance;
-//}
 
 float proximityLighting(glm::vec3 trianglePoint, glm::vec3 normal) {
     // lightPosition - trianglePoint -> right order?
@@ -440,16 +429,6 @@ float proximityLighting(glm::vec3 trianglePoint, glm::vec3 normal) {
     return lightIntensity;
 }
 
-// calculating normal for each triangle
-//std::vector<ModelTriangle> calcNormal(std::vector<ModelTriangle> numberOfTriangles) {
-//    for (ModelTriangle triangle : numberOfTriangles) {
-//        glm::vec3 edge_1 = triangle.vertices[1] - triangle.vertices[0];
-//        glm::vec3 edge_2 = triangle.vertices[2] - triangle.vertices[0];
-//        triangle.normal = glm::cross(edge_1, edge_2);
-//    }
-//    return numberOfTriangles;
-//}
-
 // dot product of the normal and light direction vectors
 // used to adjust the brightness of each pixel
 float calcAngleOfLightIncidence(glm::vec3 trianglePoint, glm::vec3 normal) {
@@ -458,15 +437,6 @@ float calcAngleOfLightIncidence(glm::vec3 trianglePoint, glm::vec3 normal) {
     if (angleIncidence > 1) angleIncidence = 1;
 
     return angleIncidence;
-
-//    std::vector<ModelTriangle> triNorm = calcNormal(triangle);
-//    RayTriangleIntersection intersectPoint = getClosestIntersection(rayDirection, triangle, lightPosition);
-//    std::vector<float> vector_angleOfIncidence;
-//    for (ModelTriangle eachNorm : triNorm) {
-//        float angleOfIncidence = glm::dot(eachNorm.normal, lightPosition - intersectPoint.intersectionPoint);
-//        vector_angleOfIncidence.push_back(angleOfIncidence);
-//    }
-//    return vector_angleOfIncidence;
 }
 
 
