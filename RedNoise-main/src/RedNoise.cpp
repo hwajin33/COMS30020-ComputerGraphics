@@ -26,7 +26,8 @@ using namespace std;
 
 
 glm::vec3 cameraPosition(0, 0, 4);
-glm::vec3 lightPosition = glm::vec3(0, 0.5, 0.5);
+//glm::vec3 lightPosition = glm::vec3(0, 0.5, 1);
+glm::vec3 lightPosition = glm::vec3(0, 0.4, 0.5);
 float focalLength = 2.0;
 std::vector<std::vector<float>> distance(HEIGHT);
 glm::mat3 cameraOrientation = glm::mat3(1, 0, 0,
@@ -434,7 +435,7 @@ RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vec
 float proximityLighting(glm::vec3 trianglePoint, glm::vec3 normal) {
     // lightPosition - trianglePoint -> right order?
     float brightLength = glm::length(lightPosition - trianglePoint);
-    float lightIntensity = 20 / (4 * M_PI * brightLength * brightLength);
+    float lightIntensity = 15 / (4 * M_PI * brightLength * brightLength);
     if (lightIntensity > 1) lightIntensity = 1;
     return lightIntensity;
 }
@@ -590,6 +591,8 @@ void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, Dra
         else if (event.key.keysym.sym == SDLK_o) lightPosition[0] -= 0.1;
         else if (event.key.keysym.sym == SDLK_l) lightPosition[1] += 0.1;
         else if (event.key.keysym.sym == SDLK_k) lightPosition[1] -= 0.1;
+        else if (event.key.keysym.sym == SDLK_m) lightPosition[2] += 0.1;
+        else if (event.key.keysym.sym == SDLK_n) lightPosition[2] -= 0.1;
     } else if (event.type == SDLK_0) {
         window.savePPM("output.ppm");
         window.saveBMP("output.bmp");
