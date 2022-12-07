@@ -434,7 +434,7 @@ RayTriangleIntersection getClosestIntersection(glm::vec3& rayDirection, std::vec
 float proximityLighting(glm::vec3 trianglePoint, glm::vec3 normal) {
     // lightPosition - trianglePoint -> right order?
     float brightLength = glm::length(lightPosition - trianglePoint);
-    float lightIntensity = 10 / (4 * M_PI * brightLength * brightLength);
+    float lightIntensity = 20 / (4 * M_PI * brightLength * brightLength);
     if (lightIntensity > 1) lightIntensity = 1;
     return lightIntensity;
 }
@@ -486,29 +486,40 @@ void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, fl
             glm::vec3 lightDirection = glm::normalize(lightPosition - closestIntersectTriangle.intersectionPoint);
             RayTriangleIntersection intersectedLightPoint = getClosestIntersection(lightDirection, triangle, lightPosition);
 
-//            if (closestIntersectTriangle.triangleIndex == intersectedLightPoint.triangleIndex) {  // shadow
-
             ModelTriangle getTriangle = closestIntersectTriangle.intersectedTriangle;
             glm::vec3 edge_1 = getTriangle.vertices[0] - getTriangle.vertices[1];
             glm::vec3 edge_2 = getTriangle.vertices[0] - getTriangle.vertices[2];
             getTriangle.normal = glm::cross(edge_1, edge_2);
 
-//            float angleOfIncidence = glm::dot(glm::normalize(singleLightSourcePosition - intersectPoint.intersectionPoint), triangle1.normal);
-            float angleOfIncidence = calcAngleOfLightIncidence(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
+            if (closestIntersectTriangle.triangleIndex != intersectedLightPoint.triangleIndex) {  // shadow
 
-            float brightness = proximityLighting(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
-            //if (brightness < 0) brightness = 0;
-//            std::cout << "brightness: " << brightness << std::endl;
-            float light = angleOfIncidence * brightness;
+    //            float angleOfIncidence = glm::dot(glm::normalize(singleLightSourcePosition - intersectPoint.intersectionPoint), triangle1.normal);
+                float angleOfIncidence = calcAngleOfLightIncidence(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
+                float brightness = proximityLighting(closestIntersectTriangle.intersectionPoint, getTriangle.normal);
+                if (brightness < 0) brightness = 0;
+                float light = angleOfIncidence * brightness;
+                if (light < 0) light = 0;
 
-            Colour getColour = getTriangle.colour;
-            getColour.red *= light;
-            getColour.blue *= light;
-            getColour.green *= light;
+//                std::cout << "angleOfIncidence: " << angleOfIncidence << std::endl;
 
-            window.setPixelColour(w, h, colourPacking(getColour));
-//                window.setPixelColour(w, h, colour);
-//            } // if
+                Colour getColour = getTriangle.colour;
+                getColour.red *= light;
+                getColour.blue *= light;
+                getColour.green *= light;
+
+//                std::cout << "light: " << light << std::endl;
+//                std::cout << "brightness: " << brightness << std::endl;
+
+                if(closestIntersectTriangle.distanceFromCamera != FLT_MAX) {
+                    window.setPixelColour(w, h, colourPacking(getColour));
+                }
+
+//                if (closestIntersectTriangle.triangleIndex == intersectedLightPoint.triangleIndex) {
+//                    window.setPixelColour(w, h, colourPacking(getColour));
+//                }
+    //                window.setPixelColour(w, h, colour);
+            } // if
+
         }
     }
 }
