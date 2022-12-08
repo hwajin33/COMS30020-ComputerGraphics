@@ -17,12 +17,14 @@
 #include <RayTriangleIntersection.h>
 #include <chrono>
 #include <thread>
+#include <cstdio>
 
 
 #define WIDTH 320
 #define HEIGHT 320
 
 using namespace std;
+
 
 
 glm::vec3 cameraPosition(0, 0, 4);
@@ -76,11 +78,6 @@ CanvasTriangle randomVertices() {
     return CanvasTriangle(v0, v1, v2);
 }
 
-// returning the whole size of the map???
-uint32_t textureMap(TextureMap& tMap, size_t t_x, size_t t_y) {
-//     auto texturePixel = TextureMap("texture.ppm");
-    return tMap.pixels[t_x + t_y * tMap.width];
-}
 
 // Drawing a line on the canvas
 void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>& distance, DrawingWindow &window, Colour colour) {
@@ -107,28 +104,6 @@ void drawLine(CanvasPoint from, CanvasPoint to, std::vector<std::vector<float>>&
     }
 }
 
-void texture_drawLine(CanvasPoint from, CanvasPoint to, DrawingWindow &window, TextureMap& tMap) {
-    float xDistance = to.x - from.x;
-    float yDistance = to.y - from.y;
-    float numberOfSteps = max(abs(xDistance) + 1, abs(yDistance) + 1);
-    float xStepSize = xDistance / numberOfSteps;
-    float yStepSize = yDistance / numberOfSteps;
-
-    float x_textDistance = to.texturePoint.x - from.texturePoint.x;
-    float y_textDistance = to.texturePoint.y - from.texturePoint.y;
-    float x_textStepSize = x_textDistance / numberOfSteps;
-    float y_textStepSize = y_textDistance / numberOfSteps;
-
-    for (float i = 0.0; i < numberOfSteps; i++) {
-        float x = round(from.x + (xStepSize * i));
-        float y = round(from.y + (yStepSize * i));
-
-        float x_text = from.texturePoint.x + x_textStepSize * i;
-        float y_text = from.texturePoint.y + y_textStepSize * i;
-
-        window.setPixelColour(x, y, textureMap(tMap, x_text, y_text));
-    }
-}
 
 void drawTriangle(CanvasTriangle triangle, std::vector<std::vector<float>>& distance, Colour triColour, DrawingWindow &window) {
 //    std::cout << "drawTriangle is called" << std::endl;
@@ -190,59 +165,6 @@ void fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<
     }
 
 //    drawTriangle(triangle, distance, fillColour, window);
-}
-
-void texture_fillInTriangle(DrawingWindow& window, CanvasTriangle triangle, std::vector<std::vector<float>>& distance, TextureMap& textureMap) {
-    if (triangle.v0().y > triangle.v1().y) {
-        swap(triangle.vertices[0], triangle.vertices[1]);
-    }
-    if (triangle.v0().y > triangle.v2().y) {
-        swap(triangle.vertices[0], triangle.vertices[2]);
-    }
-    if (triangle.v1().y > triangle.v2().y) {
-        swap(triangle.vertices[1], triangle.vertices[2]);
-    }
-
-    float x_difference = (triangle.v2().x) - (triangle.v0().x);
-    float y_difference = (triangle.v2().y) - (triangle.v0().y);
-    float ratio = x_difference/y_difference;
-    float smallTriBottom = (triangle.v1().y - triangle.v0().y) * ratio;
-    CanvasPoint extraPoint = CanvasPoint((triangle.v0().x + smallTriBottom), triangle.v1().y, triangle.v1().depth);
-
-    float diff_1 = triangle.v1().y - triangle.v0().y;
-    float diff_2 = triangle.v2().y - triangle.v1().y;
-
-    std::vector<float> sideV0ToExtra = interpolateSingleFloats(triangle.v0().x, extraPoint.x, diff_1);
-    std::vector<float> sideV0ToV1 = interpolateSingleFloats(triangle.v0().x, triangle.v1().x, diff_1);
-    std::vector<float> sideV1ToV2 = interpolateSingleFloats(triangle.v1().x, triangle.v2().x, diff_2);
-    std::vector<float> sideExtraToV2 = interpolateSingleFloats(extraPoint.x, triangle.v2().x, diff_2);
-
-    // linking between triangle vertices and positions on a texture map
-    float x_extraPoint = interpolation(extraPoint.x, triangle.v2().x, triangle.v0().x, triangle.v2().texturePoint.x, triangle.v0().texturePoint.x);
-    float y_extraPoint = interpolation(extraPoint.y, triangle.v2().y, triangle.v0().y, triangle.v2().texturePoint.y, triangle.v0().texturePoint.y);
-
-    for (size_t i = 0; i < diff_1; i++) {
-        CanvasPoint position_1(sideV0ToExtra[i], i + triangle.v0().y);
-        CanvasPoint position_2(sideV0ToV1[i], i + triangle.v0().y);
-        position_1.texturePoint = TexturePoint(interpolation(sideV0ToExtra[i], extraPoint.x, triangle.v0().x, x_extraPoint, triangle.v0().texturePoint.x),
-                                               interpolation(i + triangle.v0().y, extraPoint.y, triangle.v0().y, y_extraPoint, triangle.v0().texturePoint.y));
-        position_2.texturePoint = TexturePoint(interpolation(sideV0ToV1[i], triangle.v0().x, triangle.v1().x, triangle.v0().texturePoint.x, triangle.v1().texturePoint.x),
-                                               interpolation(i + triangle.v0().y, triangle.v0().y, triangle.v1().y, triangle.v0().texturePoint.y, triangle.v1().texturePoint.y));
-
-        texture_drawLine(position_1, position_2, window, textureMap);
-    }
-
-    for (size_t i = 0; i < diff_2; i++) {
-        CanvasPoint position_1(sideExtraToV2[i], i + triangle.v1().y);
-        CanvasPoint position_2(sideV1ToV2[i], i + triangle.v1().y);
-        position_1.texturePoint = TexturePoint(interpolation(sideExtraToV2[i], extraPoint.x, triangle.v2().x, x_extraPoint, triangle.v2().texturePoint.x),
-                                               interpolation(i + triangle.v1().y, extraPoint.y, triangle.v2().y, y_extraPoint, triangle.v2().texturePoint.y));
-        position_2.texturePoint = TexturePoint(interpolation(sideV1ToV2[i], triangle.v2().x, triangle.v1().x, triangle.v2().texturePoint.x, triangle.v1().texturePoint.x),
-                                               interpolation(i + triangle.v1().y, triangle.v2().y, triangle.v1().y, triangle.v2().texturePoint.y, triangle.v1().texturePoint.y));
-
-        texture_drawLine(position_1, position_2,window, textureMap);
-    }
-    drawTriangle(triangle, distance, Colour(255, 255, 255), window);
 }
 
 // Reading the mtl file and getting the information of colours for the palette
@@ -487,11 +409,6 @@ void drawRayTracingScene(std::vector<ModelTriangle> triangle, float posRange, fl
                 if(closestIntersectTriangle.distanceFromCamera != FLT_MAX) {
                     window.setPixelColour(w, h, colourPacking(getColour));
                 }
-
-//                if (closestIntersectTriangle.triangleIndex == intersectedLightPoint.triangleIndex) {
-//                    window.setPixelColour(w, h, colourPacking(getColour));
-//                }
-    //                window.setPixelColour(w, h, colour);
             } // if
 
         }
@@ -505,7 +422,7 @@ void rasterising_draw(DrawingWindow &window) {
     }
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     wireframeColour(obj, ::distance, window);  //    projecting the box
-    camRotation();
+    //camRotation();
     lookAt();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
@@ -517,7 +434,7 @@ void wireframe_draw(DrawingWindow &window) {
     }
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     wireframe(obj, ::distance, window);
-    camRotation();
+    //camRotation();
     lookAt();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
@@ -531,20 +448,10 @@ void rayTrace_draw(DrawingWindow &window) {
     float posRange = 60;
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
     drawRayTracingScene(obj, posRange, ::focalLength, window);
-    camRotation();
+    //camRotation();
     lookAt();
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 }
-
-//bool animation(DrawingWindow &window) {
-//    bool orbit = camRotation();
-//    char imageBuffer(50);
-//
-//
-//    window.savePPM("output.ppm");
-//    window.saveBMP("output.bmp");
-//
-//}
 
 void handleEvent(SDL_Event event, std::vector<std::vector<float>>& distance, DrawingWindow &window) {
     if (event.type == SDL_KEYDOWN) {
@@ -584,16 +491,6 @@ int main(int argc, char *argv[]) {
     }
 
     std::vector<ModelTriangle> obj = readOBJFile("cornell-box.obj", 0.35);
-
-    // projecting W3 textureMap
-    CanvasPoint p1(160, 10);
-    p1.texturePoint = TexturePoint(195, 5);
-    CanvasPoint p2(300, 230);
-    p2.texturePoint = TexturePoint(395, 380);
-    CanvasPoint p3(10, 150);
-    p3.texturePoint = TexturePoint(65, 330);
-    TextureMap tex = TextureMap("texture.ppm");
-//    texture_fillInTriangle(window, CanvasTriangle(p1, p2, p3), distance, tex);
 
     std::cout << "done" << std::endl;
 
